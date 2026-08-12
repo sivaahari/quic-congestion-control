@@ -24,9 +24,19 @@
 client.log
 server.log
 
-# Build output
-build/
-target/
+# Build output.
+#
+# NOT a bare `build/` or `target/`: git matches those at ANY depth, so `build/`
+# silently excluded code/build/ -- all 33 apparatus scripts, including the
+# 01_install_deps.sh the README tells people to run. Anchor the patterns to the
+# upstream trees they were meant for. (Those trees are already excluded whole,
+# above; these remain as belt and braces for anyone who clones one in place.)
+/picoquic/build/
+/msquic/build/
+/ngtcp2/build/
+/nghttp3/build/
+/quiche/target/
+/harness/quiche/target/
 *.o
 *.a
 *.so
