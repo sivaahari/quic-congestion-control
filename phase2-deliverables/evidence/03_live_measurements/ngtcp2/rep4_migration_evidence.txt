@@ -1,0 +1,6 @@
+# extract from client.log (444223159 bytes)
+# full log retained in the project tree; only migration evidence shipped
+I00000023 0xffe386c839902a1b86a499ad4163407557 cry remote transport_parameters disable_active_migration=0
+Changing local address
+Local address is now [10.0.3.1]:44639
+Path validation against path {local:[10.0.3.1]:44639, remote:[10.0.9.1]:4433} succeeded

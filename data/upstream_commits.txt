@@ -1,0 +1,9 @@
+# The five surveyed implementations, at the commit each was audited and measured at.
+# Clone these to reproduce; nothing upstream is vendored into this repository.
+
+IMPLEMENTATION COMMIT                                         UPSTREAM
+picoquic   0dc8ba8b2be30246720934d3f43a144b372e1a90       https://github.com/private-octopus/picoquic
+quic-go    2cfe6ee0b5ac905f7f7cecc0f2107d3b7bec2e93       https://github.com/quic-go/quic-go
+quiche     e97798e16b3cfcebedac1a42f7f2434d9a0feac9       https://github.com/cloudflare/quiche
+msquic     4db8b3987100034e9ded68df2c4d3526cbeeeaad       https://github.com/microsoft/msquic
+ngtcp2     d7fb3ed0407e1333e4ecbd011fcfd9c16499d5e0       https://github.com/ngtcp2/ngtcp2

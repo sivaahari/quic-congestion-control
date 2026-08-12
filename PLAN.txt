@@ -1,0 +1,271 @@
+===============================================================================
+ THE PLAN, IN PLAIN ENGLISH
+ A capstone research project on QUIC and mobile handover
+ Version 2 - rewritten 5 August 2026, after the direction changed
+===============================================================================
+
+ This file explains the whole project without jargon. There is a companion
+ file, PLAN.md, which says the same things in precise technical language. If
+ the two ever disagree, the technical one is correct.
+
+ IMPORTANT: this is version 2. The project changed direction on 5 August 2026.
+ Part 1 explains what we originally set out to do and why we stopped. If you
+ only want the current plan, skip to Part 2.
+
+
+===============================================================================
+ PART 1 - WHAT WE ORIGINALLY PLANNED, AND WHY WE CHANGED IT
+===============================================================================
+
+ THE ORIGINAL IDEA
+ -----------------
+
+ When your phone switches from Wi-Fi to mobile data, the connection survives,
+ but it has to relearn how fast the new network is. It starts slow and speeds
+ up. You feel that as a stall.
+
+ We noticed that the protocol already runs a compulsory security check on the
+ new network a moment earlier - it sends a random number and waits for it to
+ be echoed back. That check is a round trip on the new network, so it measures
+ the network's speed for free. Our plan was to catch that measurement and use
+ it, instead of starting from a crawl.
+
+ We called it PV-Seed.
+
+
+ WHY WE STOPPED
+ --------------
+
+ In August, after we had built the testbed and done the first experiments, the
+ project lead asked a fair question: is this actually worth doing?
+
+ We audited our own idea properly instead of defending it. Three problems:
+
+ FIRST, half the idea was already allowed. The standard explicitly says an
+ implementation MAY use that security check to work out the new network's
+ delay. It is a known technique. It is used. So "the rules force you to throw
+ this away" - which was our headline - was simply not true for the delay half.
+ We had built a story around a door that was not locked.
+
+ SECOND, the genuinely new half was fragile. Measuring the network's *width*
+ (not just its length) by watching how packets bunch up works in a clean
+ laboratory, but on a real network shared with other traffic it is notoriously
+ unreliable. And we could only ever test in a simulator, so we could not have
+ proved it worked in reality.
+
+ THIRD, the prize was small. Fixing this saves roughly a tenth to a quarter of
+ a second per network switch. That is real but modest. And the technique that
+ already exists for a similar problem became a standard precisely because in
+ satellite networks the same maths saves five seconds or more. So our idea
+ would have helped most in the situation that is already solved, and least in
+ the situation we were aiming at.
+
+ Verdict: the idea did not deserve to be the centre of a paper.
+
+
+ WHAT SAVED THE PROJECT
+ ----------------------
+
+ The two most interesting things we found were not the idea. They were
+ accidents - things we discovered while building the machinery to test it.
+
+ ACCIDENT ONE. The standard says an implementation MUST reset its speed
+ estimate when the network changes. We checked a well-respected implementation
+ and found it does not. The function that performs the reset exists in the
+ code, correctly written, for all seven of its speed-control algorithms - and
+ nothing ever calls it. It is dead code.
+
+ ACCIDENT TWO. We then implemented the rule ourselves, to measure what it
+ costs. Following the rule made things dramatically worse: transfers that had
+ completed five times out of five now completed zero times out of fifteen. The
+ connection stopped working entirely.
+
+ The reason turned out to be that the rule has two halves and we had only
+ implemented one - the famous half that everyone quotes. The other half says
+ you must ignore leftover replies from the old network. We reset the estimate
+ and then immediately relearned it from exactly those stale replies, concluded
+ the new network was three times faster than it is, and flooded it.
+
+ So: following this rule PARTLY is worse than ignoring it entirely. That is
+ surprising, it is useful to know, and nobody has reported it.
+
+ Those two accidents are about what real software actually does. That is a
+ measurement study, and it is a much stronger paper than the one we planned.
+
+
+===============================================================================
+ PART 2 - THE PLAN NOW
+===============================================================================
+
+ THE ONE-SENTENCE VERSION
+ ------------------------
+
+ The standard says every QUIC implementation must reset its speed estimate
+ when your phone changes network. Nobody has ever checked whether they do -
+ so we are going to check all five of the ones that matter, and measure what
+ each choice costs.
+
+
+ THE THREE QUESTIONS
+ -------------------
+
+ For each implementation we answer the same three questions:
+
+ QUESTION 1. When the network changes, does it reset the speed estimate, as
+             the standard requires?
+
+ QUESTION 2. The protocol already takes a free measurement of the new network,
+             for security reasons. Does the implementation use it, or throw it
+             away? (The standard permits using it. Does anyone bother?)
+
+ QUESTION 3. Does it correctly ignore the leftover replies from the old
+             network - the thing that broke our own attempt?
+
+ Five implementations: picoquic, quic-go, quiche, msquic, ngtcp2. Between them
+ they cover C, Go, and Rust, and they are used by Cloudflare, Microsoft, and a
+ large part of the internet.
+
+ We answer each question TWICE for every implementation: once by reading the
+ source code, and once by running it and measuring. If the two disagree, we
+ have made a mistake somewhere and we go and find it. That is exactly how we
+ built confidence in the picoquic result.
+
+
+ THEN: WHAT DOES IT COST?
+ ------------------------
+
+ Knowing who does what is only half the story. The other half is whether it
+ matters. So for each behaviour we find, we measure the cost in our testbed:
+
+   - how long the connection takes to get back up to full speed
+   - how much data it failed to send while recovering
+   - whether transfers complete at all
+   - whether it overshoots and floods the new network
+
+ We test two situations that stress opposite failure modes: switching from a
+ slow network to a fast one (where resetting costs you the most), and from a
+ fast one to a slow one (where NOT resetting is dangerous).
+
+
+===============================================================================
+ PART 3 - WHAT IS ALREADY DONE
+===============================================================================
+
+ A surprising amount. None of the earlier work was wasted, because the
+ machinery for testing our idea is exactly the machinery for the survey.
+
+ DONE - THE WORKSHOP
+   A virtual network inside the computer, with two separate paths between a
+   client and a server, each with independently adjustable speed and delay.
+   We can make a connection switch from one to the other on command.
+
+ DONE - PROVING THE WORKSHOP IS HONEST
+   Before measuring anything we tested the simulator itself and found two
+   flaws that would have quietly corrupted every result. One setting, if
+   wrong, lets test traffic through untouched, so you end up measuring your
+   own simulator. Short measurement bursts give badly wrong answers without a
+   correction we had to work out. Both are now documented and fixed.
+
+ DONE - THE FIRST IMPLEMENTATION
+   picoquic built, its own 548 tests passing, its behaviour audited four
+   separate ways, and the result confirmed by live recordings.
+
+ DONE - A CORRECT VERSION TO COMPARE AGAINST
+   Since picoquic does not follow the rule, we wrote a version that does. It
+   is switched off by default, and we proved that with it switched off the
+   software behaves exactly as before - so our comparison is fair.
+
+ DONE - THE MEASUREMENT AND ANALYSIS TOOLS
+   Everything that turns a raw recording into a number or a graph.
+
+ STILL TO DO
+   Four more implementations. The cost measurements. The paper.
+
+
+===============================================================================
+ PART 4 - THE ORDER OF WORK
+===============================================================================
+
+ NEXT - BUILD THE SURVEY HARNESS
+   Right now our testbed only knows how to drive picoquic. The other four
+   implementations are written in different languages, are started
+   differently, and record their internals differently. We need a common way
+   to ask all five the same three questions.
+
+   This is the interesting engineering problem of the next phase, and there is
+   a real risk in it: some implementations may not record their internal speed
+   estimate at all. Where that happens we fall back to watching the packets on
+   the wire, which tells us how fast it is actually sending even if it will
+   not tell us what it believes.
+
+   Done when: one non-picoquic implementation runs end to end and answers all
+   three questions.
+
+ THEN - RUN THE SURVEY
+   Four implementations, source audit plus live measurement for each.
+
+ THEN - MEASURE WHAT EACH BEHAVIOUR COSTS
+   The handover grid, repeated enough times to be believable.
+
+ THEN - WRITE IT UP
+
+ FINALLY - GIVE THE WORK BACK
+   Report the compliance finding to the affected projects and offer them our
+   corrected implementation. That is both the right thing to do and, honestly,
+   good for the paper.
+
+
+===============================================================================
+ PART 5 - WHAT COULD STILL GO WRONG
+===============================================================================
+
+ EVERYONE TURNS OUT TO BE COMPLIANT.
+   Then picoquic is an outlier rather than a symptom. That is still a
+   publishable result - a table showing four correct and one incorrect is a
+   finding - but a weaker one. We would lean harder on the "partial compliance
+   is harmful" result, which stands on its own.
+
+ WE CANNOT SEE INSIDE SOME IMPLEMENTATIONS.
+   Mitigated by measuring from the wire instead. Slower and less precise, but
+   it answers the question that actually matters: how fast is it sending?
+
+ THE COST TURNS OUT TO BE NEGLIGIBLE.
+   Then the honest paper says so: "implementations diverge, and here is
+   evidence it does not matter much." Less exciting, still true, still worth
+   knowing. We are not going to manufacture a large number.
+
+ We would rather report any of these plainly than dress them up.
+
+
+===============================================================================
+ PART 6 - WHAT WE ARE NOT CLAIMING
+===============================================================================
+
+ - We have surveyed one implementation. One is not a survey.
+ - We have not shown any particular fix is worth deploying.
+ - Everything is simulated. No real phones, no real mobile networks.
+ - Our own corrected version still fails in one scenario. We found one cause
+   and there is evidence of a second we have not yet isolated.
+ - The earliest batch of measurements is contaminated by our own bug and must
+   not be quoted. It is kept only for the record.
+
+
+===============================================================================
+ PART 7 - THE THIRTY-SECOND VERSION
+===============================================================================
+
+ "When your phone switches from Wi-Fi to mobile data, the rules say the
+  connection must forget how fast the old network was and start over. We
+  checked whether real software actually does that. The first one we looked
+  at doesn't - the code to do it exists and is never called. Then we
+  implemented the rule properly ourselves, and it made things far worse,
+  because the rule has a second half that is easy to miss. Nobody has ever
+  measured which implementations get this right. We are going to."
+
+ And if you have five seconds:
+
+ "The standard says reset. We checked whether anyone actually does."
+
+===============================================================================
+ END
+===============================================================================

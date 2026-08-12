@@ -1,0 +1,833 @@
+[
+ {
+  "version": "go1.26.5",
+  "stable": true,
+  "files": [
+   {
+    "filename": "go1.26.5.src.tar.gz",
+    "os": "",
+    "arch": "",
+    "version": "go1.26.5",
+    "sha256": "495be4bc87176ac567392e5b4116abd98466d33d7b49d41e764ccc6976b2dc42",
+    "size": 34140216,
+    "kind": "source"
+   },
+   {
+    "filename": "go1.26.5.aix-ppc64.tar.gz",
+    "os": "aix",
+    "arch": "ppc64",
+    "version": "go1.26.5",
+    "sha256": "e7f3c518fd7a8bc17f4389e342554016785f95ce447f8f09a260328de0d0f06c",
+    "size": 65480569,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.darwin-amd64.tar.gz",
+    "os": "darwin",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "6231d8d3b8f5552ec6cbf6d685bdd5482e1e703214b120e89b3bf0d7bf1ef725",
+    "size": 67836304,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.darwin-amd64.pkg",
+    "os": "darwin",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "909d87870c3e8a1b06f62287dd19ce53c42b6bd6d6de497dfcb255b5fa4f63f2",
+    "size": 69078342,
+    "kind": "installer"
+   },
+   {
+    "filename": "go1.26.5.darwin-arm64.tar.gz",
+    "os": "darwin",
+    "arch": "arm64",
+    "version": "go1.26.5",
+    "sha256": "efb87ff28af9a188d0536ef5d42e63dd52ba8263cd7344a993cc48dd11dedb6a",
+    "size": 64738542,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.darwin-arm64.pkg",
+    "os": "darwin",
+    "arch": "arm64",
+    "version": "go1.26.5",
+    "sha256": "4d9b592653239738896b302582f7c364265b6baa6e142c04731f15643b089c50",
+    "size": 65802027,
+    "kind": "installer"
+   },
+   {
+    "filename": "go1.26.5.dragonfly-amd64.tar.gz",
+    "os": "dragonfly",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "96b53091297bd3a9ec8ed39f5f76b074c813dd74a6f429c03c667877ff27fdf8",
+    "size": 66472848,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.freebsd-386.tar.gz",
+    "os": "freebsd",
+    "arch": "386",
+    "version": "go1.26.5",
+    "sha256": "1a0226fc025d97d30a112ad0d09b13dcacedc5b24b04bf8f21a0cd29aac4d947",
+    "size": 64836360,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.freebsd-amd64.tar.gz",
+    "os": "freebsd",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "0e5ddc51a62018211d461d6bf409939b04eaa4d6dd6d7097910090ef755ed947",
+    "size": 66547624,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.freebsd-arm.tar.gz",
+    "os": "freebsd",
+    "arch": "arm",
+    "version": "go1.26.5",
+    "sha256": "f8a59e86427158d89b2ba158d7f6004881e378fa3d7e4aefd4df17e4ee3a6bd1",
+    "size": 64839698,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.freebsd-arm64.tar.gz",
+    "os": "freebsd",
+    "arch": "arm64",
+    "version": "go1.26.5",
+    "sha256": "ae3825c8c57cc0e64c2233bfb9bba2e091f2126728e4c33492592c24b60dfcd0",
+    "size": 63451907,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.illumos-amd64.tar.gz",
+    "os": "illumos",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "fcd06289bd8a5a9962e5acab2f30e7daa74952327b01366fa9f6e07007e65be1",
+    "size": 66355061,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-386.tar.gz",
+    "os": "linux",
+    "arch": "386",
+    "version": "go1.26.5",
+    "sha256": "88c162b204e6eefcc32499453b492e80209f4a4c78c33092636901c540fb0d05",
+    "size": 65203409,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-amd64.tar.gz",
+    "os": "linux",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053",
+    "size": 66879095,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-arm64.tar.gz",
+    "os": "linux",
+    "arch": "arm64",
+    "version": "go1.26.5",
+    "sha256": "fe4789e92b1f33358680864bbe8704289e7bb5fc207d80623c308935bd696d49",
+    "size": 63759990,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-armv6l.tar.gz",
+    "os": "linux",
+    "arch": "armv6l",
+    "version": "go1.26.5",
+    "sha256": "6dae9edab81c13bccf962dec15f1fd2ec26c14a6821b4d2c92dab4130c289d7a",
+    "size": 65406756,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-loong64.tar.gz",
+    "os": "linux",
+    "arch": "loong64",
+    "version": "go1.26.5",
+    "sha256": "82736bb7794547a73372ddfeb1b370cfea4d17f04782a65e82a389a01ff0f7aa",
+    "size": 65137887,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-mips.tar.gz",
+    "os": "linux",
+    "arch": "mips",
+    "version": "go1.26.5",
+    "sha256": "3d313aefb8b7547beae18bb69febcf1571f775146209332a48a2942993655417",
+    "size": 63111975,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-mips64.tar.gz",
+    "os": "linux",
+    "arch": "mips64",
+    "version": "go1.26.5",
+    "sha256": "7e5547e99a891e338fa5490b72d46ea7fd0593259df51561d7f55d4698503a8c",
+    "size": 62798196,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-mips64le.tar.gz",
+    "os": "linux",
+    "arch": "mips64le",
+    "version": "go1.26.5",
+    "sha256": "7e05aceb9dea6033bc2f6dde29139293d8247cc2db749a206472b3916b1765a1",
+    "size": 62457763,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-mipsle.tar.gz",
+    "os": "linux",
+    "arch": "mipsle",
+    "version": "go1.26.5",
+    "sha256": "e481470951e3a22a014ee70aebaae0c35aae4193a253d22ecf59d58f4bdbc450",
+    "size": 62901896,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-ppc64.tar.gz",
+    "os": "linux",
+    "arch": "ppc64",
+    "version": "go1.26.5",
+    "sha256": "8ef02abd6f2b4040b7eb001b64597d16b9fa9aa563baaecf181ad8d9806c9991",
+    "size": 64409196,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-ppc64le.tar.gz",
+    "os": "linux",
+    "arch": "ppc64le",
+    "version": "go1.26.5",
+    "sha256": "c5d60e2b303bb612f20cd82786594b64874e73b35134025e27d3390bf284ae43",
+    "size": 64447737,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-riscv64.tar.gz",
+    "os": "linux",
+    "arch": "riscv64",
+    "version": "go1.26.5",
+    "sha256": "d4a24dd4484d3f86b99c2d300af0dea5d184557e6d61eb7aba19ff61662750e3",
+    "size": 64746430,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.linux-s390x.tar.gz",
+    "os": "linux",
+    "arch": "s390x",
+    "version": "go1.26.5",
+    "sha256": "09ce3c504c0323968b75a717244dca4f25cd4cf0443e5ff6bc0bfa74add89fa7",
+    "size": 66021033,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.netbsd-386.tar.gz",
+    "os": "netbsd",
+    "arch": "386",
+    "version": "go1.26.5",
+    "sha256": "6df082b6dd877c3e71af3c44e67b8684f8592cb0fc50aed3ea9e58968bc3165f",
+    "size": 64767284,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.netbsd-amd64.tar.gz",
+    "os": "netbsd",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "daed1cb730d52e8b40866253b6271fd215f6128372dccc61d7784d4d3fb4a1bf",
+    "size": 66471300,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.netbsd-arm.tar.gz",
+    "os": "netbsd",
+    "arch": "arm",
+    "version": "go1.26.5",
+    "sha256": "d8a18f2d5afb6aaf47b79135221a964c21ee5cf5d568301a718904d887b1c96f",
+    "size": 64760802,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.netbsd-arm64.tar.gz",
+    "os": "netbsd",
+    "arch": "arm64",
+    "version": "go1.26.5",
+    "sha256": "60520191abd288fb0f22b279ee63497b3a81318134e41f2bb80f548c9227bd6a",
+    "size": 63374225,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.openbsd-386.tar.gz",
+    "os": "openbsd",
+    "arch": "386",
+    "version": "go1.26.5",
+    "sha256": "723a35e81882ddd8bdcb2539111f53ab4b03d4dbc114a2420d47963163465843",
+    "size": 64570733,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.openbsd-amd64.tar.gz",
+    "os": "openbsd",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "27721c64efcb571ecfbf52ee77f133ec73dca96015b315199be104ed2dfafd87",
+    "size": 66264831,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.openbsd-arm.tar.gz",
+    "os": "openbsd",
+    "arch": "arm",
+    "version": "go1.26.5",
+    "sha256": "2de3fb692c74c68a40d8c92ec6a077a18c14a44e8e41a8c22edeb286b3a4dfce",
+    "size": 64572554,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.openbsd-arm64.tar.gz",
+    "os": "openbsd",
+    "arch": "arm64",
+    "version": "go1.26.5",
+    "sha256": "969a90bc34bda3ec06c0c3278ae00cdaa9b747b100cadec9f3f8c2cb36f01c69",
+    "size": 63202171,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.openbsd-ppc64.tar.gz",
+    "os": "openbsd",
+    "arch": "ppc64",
+    "version": "go1.26.5",
+    "sha256": "cb3908dd5904df453ebce07cfc660b7a14b7fed9525463521f01a04affd49eb8",
+    "size": 63885284,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.openbsd-riscv64.tar.gz",
+    "os": "openbsd",
+    "arch": "riscv64",
+    "version": "go1.26.5",
+    "sha256": "922864dbcb3ec989f456b2c313a46a4c0b0bd93b398603dc0db2d5a72b5ca47c",
+    "size": 64221320,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.plan9-386.tar.gz",
+    "os": "plan9",
+    "arch": "386",
+    "version": "go1.26.5",
+    "sha256": "7858fe6515a8e71050a3b59211b6c6f6947822497ecbe1ab81f4e4503b67a635",
+    "size": 63602539,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.plan9-amd64.tar.gz",
+    "os": "plan9",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "513acf2518947e51210772145436e62eb67cc44738c5df3b6218dfeb66f6416c",
+    "size": 65355790,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.plan9-arm.tar.gz",
+    "os": "plan9",
+    "arch": "arm",
+    "version": "go1.26.5",
+    "sha256": "131c06ed5b7ce904ff7b121c63ffd76a699fff43b96e019914f093ede1be9e4a",
+    "size": 63609389,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.solaris-amd64.tar.gz",
+    "os": "solaris",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "33a1fc532f8d5fc5964b28a056729bc50a59657b653a5f1b04c2aeb2ac54c149",
+    "size": 66345897,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.windows-386.zip",
+    "os": "windows",
+    "arch": "386",
+    "version": "go1.26.5",
+    "sha256": "cab0f6847c17f4c904c0bacb6ec6b84e730fc797f4ba885f42383d580fc2d399",
+    "size": 73706951,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.windows-386.msi",
+    "os": "windows",
+    "arch": "386",
+    "version": "go1.26.5",
+    "sha256": "fe20b9d7cc23c9f1afb702a7f04161d75055cd6d58c783d9ad3381e4e83fe9b8",
+    "size": 60784640,
+    "kind": "installer"
+   },
+   {
+    "filename": "go1.26.5.windows-amd64.zip",
+    "os": "windows",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "97e6b2a833b6d89f9ff17d25419ac0a7e3b482a044e9ab18cdef834bd834fd38",
+    "size": 74927386,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.windows-amd64.msi",
+    "os": "windows",
+    "arch": "amd64",
+    "version": "go1.26.5",
+    "sha256": "d554dc209403b101225fc2b54647ef47df09bea23291b1246fe1b35198f55f50",
+    "size": 62308352,
+    "kind": "installer"
+   },
+   {
+    "filename": "go1.26.5.windows-arm64.zip",
+    "os": "windows",
+    "arch": "arm64",
+    "version": "go1.26.5",
+    "sha256": "f96ee46396d69f1e231c8d981ec6a70216238a646a1f2cd74aea0d0016bbc017",
+    "size": 71440103,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.26.5.windows-arm64.msi",
+    "os": "windows",
+    "arch": "arm64",
+    "version": "go1.26.5",
+    "sha256": "96676697bf6a2419374d3d0c5246f616c99332ac09d8c63964d9395645596b04",
+    "size": 59916288,
+    "kind": "installer"
+   }
+  ]
+ },
+ {
+  "version": "go1.25.12",
+  "stable": true,
+  "files": [
+   {
+    "filename": "go1.25.12.src.tar.gz",
+    "os": "",
+    "arch": "",
+    "version": "go1.25.12",
+    "sha256": "f90dcee4bd023fa376374ea0a5a6ebe553537b39c426ffd8c689469b45519932",
+    "size": 32013699,
+    "kind": "source"
+   },
+   {
+    "filename": "go1.25.12.aix-ppc64.tar.gz",
+    "os": "aix",
+    "arch": "ppc64",
+    "version": "go1.25.12",
+    "sha256": "70b4b6509ed60735eff6ed9496824ad9f96201fdf5bd190184123f5908f224ef",
+    "size": 58656354,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.darwin-amd64.tar.gz",
+    "os": "darwin",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "00a2e743b82bccec03c51c4b0f7e46d5fec52184075fd6c5183c3bb39ae9fb00",
+    "size": 60594502,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.darwin-amd64.pkg",
+    "os": "darwin",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "2c6b49d08e1ba340d0608d4c64ea5dbbd7f635763dec456fb87ad0d0d6629367",
+    "size": 61911786,
+    "kind": "installer"
+   },
+   {
+    "filename": "go1.25.12.darwin-arm64.tar.gz",
+    "os": "darwin",
+    "arch": "arm64",
+    "version": "go1.25.12",
+    "sha256": "fa2c88bbcf64bd3b2aef355f026cfec6d3a4a01c132f999c8f8c964eb767164f",
+    "size": 58121109,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.darwin-arm64.pkg",
+    "os": "darwin",
+    "arch": "arm64",
+    "version": "go1.25.12",
+    "sha256": "a3d7891214fbcd1a31398ddfb2b6f68ebc01a0f05e5398d9b23e63bcea5d557e",
+    "size": 59299806,
+    "kind": "installer"
+   },
+   {
+    "filename": "go1.25.12.dragonfly-amd64.tar.gz",
+    "os": "dragonfly",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "2124cfbc1cf0b949eb819478365d4d665f84297a60f327cc65f75f61b2629b96",
+    "size": 59518927,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.freebsd-386.tar.gz",
+    "os": "freebsd",
+    "arch": "386",
+    "version": "go1.25.12",
+    "sha256": "bdb8ab506428e9633653e67c13d582a6230406f01037023b327427c66b058ff2",
+    "size": 58274163,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.freebsd-amd64.tar.gz",
+    "os": "freebsd",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "4433a424d466d47d1716df69e6a77c65b1a34d82121488014e4656d73740ebb0",
+    "size": 59586499,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.freebsd-arm.tar.gz",
+    "os": "freebsd",
+    "arch": "arm",
+    "version": "go1.25.12",
+    "sha256": "429fbcb46468a66d1cd24129a1b6163167676aaae8e0989a08ba95ba6aae65c4",
+    "size": 58301301,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.freebsd-arm64.tar.gz",
+    "os": "freebsd",
+    "arch": "arm64",
+    "version": "go1.25.12",
+    "sha256": "c0e31a4cb827fd20fac950bcb4688fd94cdd1491dbdcff7c3754ac8f3b136eb1",
+    "size": 57078738,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.freebsd-riscv64.tar.gz",
+    "os": "freebsd",
+    "arch": "riscv64",
+    "version": "go1.25.12",
+    "sha256": "0ea50c6d43e809d46c2c5504e97ef11822f7ca137625171924cda971449b5373",
+    "size": 58127633,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.illumos-amd64.tar.gz",
+    "os": "illumos",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "d74c214e0c3ae8f9db23f4ec6f6b2f6cb300c3e4b9d840b82fa517af629c455d",
+    "size": 59404181,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-386.tar.gz",
+    "os": "linux",
+    "arch": "386",
+    "version": "go1.25.12",
+    "sha256": "b71e88ae779850dc2afcd0f2e2208798652311dfda72fdef5d05721d601b8fd3",
+    "size": 58556871,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-amd64.tar.gz",
+    "os": "linux",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "234828b7a89e0e303d2556310ee549fbcf253d28de937bac3da13d6294262ac1",
+    "size": 59856753,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-arm64.tar.gz",
+    "os": "linux",
+    "arch": "arm64",
+    "version": "go1.25.12",
+    "sha256": "8b5884aef89600aef5b0b051fb971f11f49bb996521e911f30f02a66884f7bd2",
+    "size": 57351753,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-armv6l.tar.gz",
+    "os": "linux",
+    "arch": "armv6l",
+    "version": "go1.25.12",
+    "sha256": "6cd7311c02c73ba0b482a1cf8c885268edf23519261bf4b5cef3353ad934d1f1",
+    "size": 58767788,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-loong64.tar.gz",
+    "os": "linux",
+    "arch": "loong64",
+    "version": "go1.25.12",
+    "sha256": "0c6b2b7db8509d1df189433709ddc8fe84c12843e3713508e9ca04dc9e75ddeb",
+    "size": 58332571,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-mips.tar.gz",
+    "os": "linux",
+    "arch": "mips",
+    "version": "go1.25.12",
+    "sha256": "5abc63471425ab8b3408f596cd547d28d374f6dc860a4cbd6de79497123db4f3",
+    "size": 56731819,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-mips64.tar.gz",
+    "os": "linux",
+    "arch": "mips64",
+    "version": "go1.25.12",
+    "sha256": "a18f7a5ac799ed8ac264b63707e7fa475b1b81da6bbdd41c394fcfd69cc6b736",
+    "size": 56505189,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-mips64le.tar.gz",
+    "os": "linux",
+    "arch": "mips64le",
+    "version": "go1.25.12",
+    "sha256": "5bde8a5d4c05b428fca3e6022dc41d4c735858be9c6945e57473da00fcddd0cc",
+    "size": 56258903,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-mipsle.tar.gz",
+    "os": "linux",
+    "arch": "mipsle",
+    "version": "go1.25.12",
+    "sha256": "33c243d2b0700589e75a410ebab5b64580a477e908872abc46eef840e6ea535a",
+    "size": 56589133,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-ppc64.tar.gz",
+    "os": "linux",
+    "arch": "ppc64",
+    "version": "go1.25.12",
+    "sha256": "b5288a7adb38540177146b47aa43bc75f1936c5e14026d6b6e531b534a49eb1a",
+    "size": 57788168,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-ppc64le.tar.gz",
+    "os": "linux",
+    "arch": "ppc64le",
+    "version": "go1.25.12",
+    "sha256": "64adb4ddefef4f0a6f11af550547f39bf510350da69ab308438a21eacfde97ad",
+    "size": 57859265,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-riscv64.tar.gz",
+    "os": "linux",
+    "arch": "riscv64",
+    "version": "go1.25.12",
+    "sha256": "26919d62d21b0bee9c5c67ad76ace462edd16c2c128a983d942cb45b0bf7693c",
+    "size": 58387442,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.linux-s390x.tar.gz",
+    "os": "linux",
+    "arch": "s390x",
+    "version": "go1.25.12",
+    "sha256": "09875de1d6cb3237437112271b9df3a96bac9fcd10cbf9bc777c00e67f4e3e3d",
+    "size": 59137030,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.netbsd-386.tar.gz",
+    "os": "netbsd",
+    "arch": "386",
+    "version": "go1.25.12",
+    "sha256": "2f19f4afc3d6551804228484569ec1ebf4a57a91cda75d746384aa71d5016be7",
+    "size": 58200906,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.netbsd-amd64.tar.gz",
+    "os": "netbsd",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "d2237237d34058658187455d4f05f8f4f5f2118b33827308ad8313ab0f00a693",
+    "size": 59510578,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.netbsd-arm.tar.gz",
+    "os": "netbsd",
+    "arch": "arm",
+    "version": "go1.25.12",
+    "sha256": "4d44c8141a829541c3499db6665a47be2c6fdb97903575058809a2a8be53af89",
+    "size": 58228172,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.netbsd-arm64.tar.gz",
+    "os": "netbsd",
+    "arch": "arm64",
+    "version": "go1.25.12",
+    "sha256": "fc96791f8b9cdaea544e827dc15574731afd28b7378053e801b3bd466df6dd9d",
+    "size": 57019473,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.openbsd-386.tar.gz",
+    "os": "openbsd",
+    "arch": "386",
+    "version": "go1.25.12",
+    "sha256": "e9ced39c191409207a211c6013b9a156bd90dbd5a76ebd8c66dc3bf69bcb2f9e",
+    "size": 58029490,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.openbsd-amd64.tar.gz",
+    "os": "openbsd",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "bae7c016f0aff806c9af08ecff96b59a232144c96b1d25f4c5f6c85c8e0dbf01",
+    "size": 59324128,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.openbsd-arm.tar.gz",
+    "os": "openbsd",
+    "arch": "arm",
+    "version": "go1.25.12",
+    "sha256": "8517c4bca20e975acdd5a2f5e425cd2bec737bbb6d7ee18d11e3a1545014267e",
+    "size": 58051387,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.openbsd-arm64.tar.gz",
+    "os": "openbsd",
+    "arch": "arm64",
+    "version": "go1.25.12",
+    "sha256": "ba4ac29243f43b85a52f12ed7dd02b767e4524785fb6d04fececb7ce125aaa82",
+    "size": 56855406,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.openbsd-ppc64.tar.gz",
+    "os": "openbsd",
+    "arch": "ppc64",
+    "version": "go1.25.12",
+    "sha256": "dca067f41d00ba805342062ab21b88831a06a5682e9aaec1c990c175a5656c6b",
+    "size": 57312881,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.openbsd-riscv64.tar.gz",
+    "os": "openbsd",
+    "arch": "riscv64",
+    "version": "go1.25.12",
+    "sha256": "4f1f5376464fc91f32cd253dadfe3535ff57d1729b24e6ab014fb83964dfe10f",
+    "size": 57919192,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.plan9-386.tar.gz",
+    "os": "plan9",
+    "arch": "386",
+    "version": "go1.25.12",
+    "sha256": "c938792ec65ba33592deea6673265d509aaf9b5297119bc91ae973fb6beb62b9",
+    "size": 57179791,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.plan9-amd64.tar.gz",
+    "os": "plan9",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "5aec7ab115c1c6cd049a64f1617ef91d24ea07c8b0f40436d531b42d546f5e37",
+    "size": 58540146,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.plan9-arm.tar.gz",
+    "os": "plan9",
+    "arch": "arm",
+    "version": "go1.25.12",
+    "sha256": "efe1dcb9750507260a28688a749c72f35c3160646f08a80606f38c3d30d74a12",
+    "size": 57228237,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.solaris-amd64.tar.gz",
+    "os": "solaris",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "83c42cfedcc0bb03fd601d692d75b085406c9a7f5ff505bf41030f2734b62ed2",
+    "size": 59408746,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.windows-386.zip",
+    "os": "windows",
+    "arch": "386",
+    "version": "go1.25.12",
+    "sha256": "18abdf76719f5f84eaa35eeaf87b467a02ed075a8632ad941f10aa7a3d0de713",
+    "size": 66609995,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.windows-386.msi",
+    "os": "windows",
+    "arch": "386",
+    "version": "go1.25.12",
+    "sha256": "aebfdee888d9fdeb7fe5ffaacdcc95bb900812c89afe2ce1698f6822c6c4a1d4",
+    "size": 55070720,
+    "kind": "installer"
+   },
+   {
+    "filename": "go1.25.12.windows-amd64.zip",
+    "os": "windows",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "d5dc82da351b00e5eedd04f41356817d674cc4308131f0f638a5b14c5c3af4cb",
+    "size": 67546488,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.windows-amd64.msi",
+    "os": "windows",
+    "arch": "amd64",
+    "version": "go1.25.12",
+    "sha256": "45bc4ffd130e778374818551790abc2b4378dc5e89e46fcd114627ec9ebc1687",
+    "size": 56221696,
+    "kind": "installer"
+   },
+   {
+    "filename": "go1.25.12.windows-arm64.zip",
+    "os": "windows",
+    "arch": "arm64",
+    "version": "go1.25.12",
+    "sha256": "054f046a5fa31fdcc9491cc19065cbf43bf521d805bbe298ae8d65dd981fca84",
+    "size": 64720499,
+    "kind": "archive"
+   },
+   {
+    "filename": "go1.25.12.windows-arm64.msi",
+    "os": "windows",
+    "arch": "arm64",
+    "version": "go1.25.12",
+    "sha256": "54e82ed1f76c6038f728e8025a830edfb4f0e30c3d7fd6442a2d21bb1c568e56",
+    "size": 54280192,
+    "kind": "installer"
+   }
+  ]
+ }
+]

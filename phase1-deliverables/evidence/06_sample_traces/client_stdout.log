@@ -1,0 +1,50 @@
+Starting Picoquic (v1.1.51.1) connection to server = 10.0.9.1, port = 4433
+Set version to 0x00000001 based on stored ticket
+Testing scenario: <bigfile.bin>
+Max stream id bidir remote before start = 0 (0)
+Starting client connection. Version = 1, I-CID: 333e102a07f6687d
+Max stream id bidir remote after start = 2044 (512)
+Max stream id bidir remote after 0rtt = 2044 (512)
+Opening stream 0 to GET /bigfile.bin
+Waiting for packets.
+Client port (AF=2): 49272.
+Negotiated ALPN: hq-interop
+Almost ready!
+
+Connection established. Version = 1, I-CID: 333e102a07f6687d, verified: 1
+Will test migration to new port.
+[pvseed] Simulating migration to NEW ADDRESS 10.0.3.1:30912 (was 10.0.1.1:49272:30912), port unchanged
+Stream 0 ended after 67108864 bytes
+All done, Closing the connection.
+Received a request to close the connection.
+The connection is closed!
+Out of 1 zero RTT packets, 0 were acked by the server.
+Address Discovery mode: 0 / 0 (0:0)
+Quic Bit was NOT greased by the client.
+Quic Bit was NOT greased by the server.
+ECN was received (ect0: 47744, ect1: 0, ce: 0).
+ECN was acknowledged (ect0: 2127, ect1: 0, ce: 0).
+After migration:
+- Default source address changed
+- Local CID changed
+- Remode CID changed
+Received 67108864 bytes in 15.960936 seconds, 33.636556 Mbps.
+Sent 18 bytes in 15.960936 seconds, 0.000009 Mbps.
+max_data_local: 254803968
+max_stream_data_local: 169869312
+max_data_remote: 1048576
+max_stream_data_remote: 0
+ack_delay_remote: 1000 ... 10000
+max_ack_gap_remote: 40
+ack_delay_local: 5138 ... 25000
+max_ack_gap_local: 2
+max_mtu_sent: 1252
+max_mtu_received: 1440
+System call duration max: 246
+System call duration smoothed: 0
+System call duration deviation: 1
+Received ticket from pvseed.test (hq-interop):
+ticket time = 1785834661275, kx = 17, suite = 1301, 133 ticket, 32 secret.
+lifetime = 100000, age_add = 82b4e930, 0 nonce, 112 ticket, 8 extensions.
+ticket extensions: 42(ED: ffffffff),
+Client exit with code = 0

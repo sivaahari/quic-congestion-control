@@ -1,0 +1,38 @@
+Starting test number 18, sockloop_migration
+    Success.
+Starting test number 201, nat_rebinding
+    Success.
+Starting test number 202, nat_rebinding_loss
+    Success.
+Starting test number 203, nat_rebinding_zero
+    Success.
+Starting test number 204, nat_rebinding_latency
+    Success.
+Starting test number 205, nat_rebinding_fast
+    Success.
+Starting test number 233, migration
+    Success.
+Starting test number 234, migration_long
+    Success.
+Starting test number 235, migration_with_loss
+    Success.
+Starting test number 236, migration_zero
+    Success.
+Starting test number 237, migration_fail
+    Success.
+Starting test number 238, preferred_address
+    Success.
+Starting test number 239, preferred_address_dis_mig
+    Success.
+Starting test number 240, preferred_address_zero
+    Success.
+Starting test number 251, false_migration
+    Success.
+Starting test number 299, nat_rebinding_stress
+    Success.
+Starting test number 399, migration_disabled
+    Success.
+Starting test number 472, migration_controlled
+    Success.
+Starting test number 473, migration_mtu_drop
+    Success.

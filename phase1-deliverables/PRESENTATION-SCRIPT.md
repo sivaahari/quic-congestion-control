@@ -1,0 +1,223 @@
+# Phase 1 — Presentation Script
+
+**Deck:** `PhaseI_Review.pptx` (12 slides)
+**Total runtime:** ~12 minutes + questions
+
+
+
+**How to use this:** the text in quote blocks is meant to be *spoken*, close to as written. It is deliberately written in speakable sentences, not bullet points. Stage directions are in *italics*. Don't memorise it word for word — learn the shape, then use your own words.
+
+**The one rule for everyone:** the story is a detective story. Rule → we checked → it's broken → why → what nobody knows. Don't jump ahead. The surprise on slide 5 only lands if slide 4 was delivered flat and factually.
+
+---
+
+# SIVAA — Slides 1 to 4 (~4 min 45 s)
+
+You set up the entire argument and deliver the first finding. Your job is to make the audience care about a rule before you reveal it's being ignored.
+
+## Slide 1 — Title (~20 s)
+
+> "Good morning. Our project is about what happens to your internet connection at the moment your phone switches from Wi-Fi to mobile data.
+>
+> Specifically: we went and checked what real QUIC implementations actually *do* at that moment — and found that one of the most widely used ones is breaking a rule it's required to follow."
+
+*Don't explain more here. Move on quickly — the title slide is not where you teach.*
+
+## Slide 2 — The setting (~1 min 10 s)
+
+> "Here's the situation. You're at home on Wi-Fi, downloading something. You walk out of the door, and your phone hands over to mobile data.
+>
+> Older protocols would simply drop the connection — the download would fail and restart. QUIC fixed that. It identifies you by an ID rather than by your network address, so the connection survives the switch. That part works, and it's genuinely clever.
+>
+> But surviving isn't enough. The connection still has to work out *how fast it should be sending* on this new network. And it can't see the network. There's no speedometer. The only way it can find out is to start slow, gradually speed up, and watch for the first sign that it's pushing too hard.
+>
+> That relearning process is what you actually experience as a stall — the video that buffers for a second just as you step outside."
+
+*Pause here. This is the moment the audience needs to have "how fast should I send?" in their head as a real problem.*
+
+## Slide 3 — The rule (~1 min 15 s)
+
+> "Now, the standard that defines QUIC is very clear about what should happen at that moment. This is quoted word for word from RFC 9000:
+>
+> *[read the quote on screen, slowly]*
+>
+> 'An endpoint MUST immediately reset the congestion controller and round-trip time estimator for the new path to initial values.'
+>
+> In plain terms: forget everything you learned about how fast the old network was. Start over from scratch.
+>
+> And notice the word MUST. In standards writing, that's the strongest word available. It doesn't say 'should'. It doesn't say 'may'. There is no room for interpretation.
+>
+> The reason is safety. The new network might be far slower than the old one. If you carry the old speed across and the new network can't handle it, you flood it — and that's worse for everyone than being briefly slow."
+
+*This slide does the setup. Deliver it as a statement of fact, with no hint that anything is wrong yet.*
+
+## Slide 4 — The finding (~2 min)
+
+> "So we went and checked whether implementations actually do this.
+>
+> We took picoquic — a well-respected reference implementation of QUIC, written by one of the people who helped author the standard. It has 548 of its own tests, and they all pass.
+>
+> We ran a real file transfer through a network testbed we built, switched the connection from one network to another mid-download, and recorded exactly what the congestion controller did.
+>
+> *[point at the red bar]* This is picoquic as it ships. Straight after the switch, it's still willing to send 121 kilobytes at a time — the speed it had learned on the *old* network.
+>
+> *[point at the dashed line]* And this is what the rule requires: 15 kilobytes. The starting value.
+>
+> It's eight times higher than the rule allows. picoquic doesn't reset. It carries the old network's speed straight across.
+>
+> *[point at the blue bar]* The blue bar is a version we modified ourselves to actually follow the rule — that's what compliance looks like.
+>
+> We verified this four separate ways, because frankly we didn't believe it at first. The most striking one: the function that performs this reset *exists* in the code. It's implemented for all seven congestion control algorithms picoquic supports. And it is called by absolutely nothing. It's dead code."
+
+**Hand over:**
+> "So we'd found a widely-used implementation ignoring a MUST. The obvious next step was to fix it. Kenin will take you through what happened when we did."
+
+---
+
+# KENIN — Slides 5 to 7 (~3 min 35 s)
+
+You deliver the twist and turn it into the research gap. Your section is where the project stops being a bug report and becomes a paper.
+
+## Slide 5 — It broke (~1 min 20 s)
+
+> "So we implemented the rule properly. Same testbed, same file, same network settings — the only thing we changed was making the code follow the standard.
+>
+> *[point at the left panel]* This is picoquic as shipped, ignoring the rule. Five out of five transfers completed successfully.
+>
+> *[point at the right panel]* This is our version, following the rule exactly as written. Zero out of fifteen completed. Not slower — *zero*. The connection would stall completely and eventually time out.
+>
+> We ran it fifteen times because we assumed we'd made a mistake. Every single run failed the same way.
+>
+> So we had a genuinely strange result: the implementation that ignores the standard works fine, and the one that follows it doesn't work at all."
+
+*Let that sit for a beat. This is the hook of the whole presentation.*
+
+## Slide 6 — Why it broke (~1 min 20 s)
+
+> "The reason turned out to be that the rule has two halves, and we had only implemented one of them.
+>
+> *[point right]* This is the half we implemented — reset the speed estimate to its initial value. That's the famous part, the part everyone quotes.
+>
+> *[point left]* And this is the half we missed: packets sent on the *old* network must not be allowed to influence the estimate for the *new* one.
+>
+> Here's why that matters. When you switch networks, there are still packets in flight from the old one. Replies to those packets keep arriving for a short while afterwards.
+>
+> So what our version did was: reset the speed estimate to zero-knowledge — and then immediately re-learn it from those stale replies from the old network. It concluded the new network was three times faster than it really was, and started sending three times too fast. That flooded the link, and the connection never recovered.
+>
+> The finding here is a bit counter-intuitive, and it's ours: following this rule *partly* is worse than ignoring it completely."
+
+## Slide 7 — The gap (~55 s)
+
+> "Which brings us to the question that makes this a research project rather than a bug report.
+>
+> We've checked exactly one implementation out of the five that matter. We found it doesn't follow the rule — and we found that following the rule correctly is much harder than it looks.
+>
+> *[point at the table]* For the other four — quic-go, quiche, msquic, ngtcp2 — nobody knows. It has genuinely not been measured.
+>
+> There's a study from last year that measured whether servers *support* connection migration at all. But nobody has looked at what they actually *do* to congestion control once they accept one."
+
+**Hand over:**
+> "Krithik will explain what we're proposing to do about that."
+
+---
+
+# KRITHIK — Slides 8 to 10 (~2 min 25 s)
+
+You turn the gap into a concrete plan, and establish that the measurements can be trusted.
+
+## Slide 8 — The proposal (~1 min)
+
+> "So the paper is a measurement study. We take five QUIC implementations and answer three questions for each of them.
+>
+> One: does it reset the speed estimate when the network changes, as the standard requires?
+>
+> Two: the protocol already takes a free measurement of the new network, for security reasons, before it trusts it. Does the implementation use that measurement, or throw it away?
+>
+> Three: does it correctly ignore the leftover replies from the old network — the thing that broke our own version?
+>
+> And then we measure, in our testbed, what each of those choices actually costs in performance.
+>
+> We already have the testbed, the measurement tools, and the answer for the first implementation. The remaining work is repeating it four more times."
+
+## Slide 9 — A lead for later (~50 s)
+
+> "There's one more thing worth mentioning, because it's where this could go next.
+>
+> Before a connection trusts a new network, it has to run a small security check — it sends a random number and waits for it to be echoed back. That's a compulsory round trip on the new network, and it happens at every single handover.
+>
+> Which means it's a free measurement of how fast that network responds.
+>
+> In our recordings, that check measured the new network to within 0.2% of the true value — while the connection's own estimate at that moment was three times wrong.
+>
+> The standard already allows using this for one narrow purpose. Whether it can be pushed further is a natural follow-on question — but we're being careful to treat it as a section of the paper, not the paper itself."
+
+## Slide 10 — Method (~35 s)
+
+> "Briefly on method, because the numbers only mean something if the instrument is trustworthy.
+>
+> We build our test networks in software. Before measuring anything, we tested the simulator itself — and found two flaws that would have quietly corrupted every result.
+>
+> *[point left]* One setting, if wrong, lets our test traffic through untouched — so you end up measuring your own simulator instead of the network you think you're emulating.
+>
+> *[point right]* And short measurement bursts give badly wrong answers without a correction we had to derive.
+>
+> We found and fixed both before taking a single real measurement."
+
+**Hand over:**
+> "Shafeeq will close with where we stand."
+
+---
+
+# SHAFEEQ — Slides 11 to 12 (~1 min 10 s)
+
+You close. Short, confident, and honest. Your section is what a good reviewer will remember.
+
+## Slide 11 — Status (~35 s)
+
+> "Where we are.
+>
+> The testbed is built, calibrated, and validated. We've surveyed the first implementation and found it doesn't follow the rule. We discovered that partial compliance is worse than none. And the measurement and analysis tooling is complete.
+>
+> Still ahead: four more implementations to survey, and the cost of each behaviour to quantify.
+>
+> Everything in this deck is measured. Nothing is projected or estimated."
+
+## Slide 12 — Honesty (~35 s)
+
+> "And finally, what we're deliberately *not* claiming.
+>
+> We haven't shown that any particular fix is worth deploying. We haven't tested on real phones or real cellular networks — all of this is emulation. Our own compliant version still fails in one scenario, where we've diagnosed one cause and not yet the second. And one implementation is not a survey; we need four more before we can generalise.
+>
+> We'd rather state those limits ourselves than have them found for us.
+>
+> Thank you — happy to take questions."
+
+---
+
+# Handling questions
+
+Whoever owns the relevant slide answers; Sivaa fields anything unassigned.
+
+**"Isn't this just a bug you should report to picoquic?"** *(Kenin)*
+> "We will report it. But the interesting part isn't the bug — it's that the rule is subtle enough that our own careful attempt to follow it made things worse. That suggests other implementations may have diverged too, in ways nobody has checked. That's the research."
+
+**"Why should I trust results from a simulator?"** *(Krithik)*
+> "That's exactly why slide 10 exists. We validated the simulator against known ground truth before trusting it, and we found two flaws in the process. Every capacity figure is checked against a value we set ourselves."
+
+**"How do you know picoquic doesn't reset — maybe you missed something?"** *(Sivaa)*
+> "Four independent checks. The reset function has no callers anywhere in the codebase. The code path that runs at migration resets only the packet size, not the congestion state. The congestion window is only initialised in two places, neither on this path. And the live recording shows it never changes. Static analysis and measurement agree."
+
+**"Isn't 'partial compliance is worse' just your implementation being wrong?"** *(Kenin)*
+> "Our implementation was wrong — that's the point. We implemented the half of the rule that everyone quotes and missed the half that nobody does. If it's easy for us to get wrong that way, it's worth checking whether others did too."
+
+**"What's the actual performance impact?"** *(Krithik)*
+> "That's precisely what we haven't quantified yet, and we're not going to guess. Quantifying it across all five implementations is the next phase."
+
+---
+
+# Practical notes
+
+- **Rehearse the handovers.** The three transition lines are written above; say them as written so the joins are clean.
+- **Slide 4 and slide 5 are the whole talk.** If time runs short, cut slide 9 and compress slide 10 — never compress 4, 5, or 6.
+- **Don't read the RFC quotes off the slide silently.** Read them aloud, slowly. They're short and they carry the argument.
+- **The pause after slide 5 is deliberate.** Let the 0-of-15 result land before explaining it.

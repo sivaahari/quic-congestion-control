@@ -1,0 +1,11 @@
+wrote 98361 rows -> /home/sivaa/pvseed/results/raw/quiche/migrate_demo/rep_1/server_metrics.csv
+
+===== migrate_demo =====
+  migration window : t=5022456 .. 5063033 us  (4 path_* frame events)
+  cwnd BEFORE      :       n/a B   (srtt None us)
+  cwnd MIN in/after:    12,000 B   at t=5022456 us
+  vs CWIN_INITIAL  : 12,000 B  ->  min is 1.00x initial
+  VERDICT (cwnd)   : RESET-CONSISTENT (cwnd reached the initial window)
+  srtt after (max) : 276974 us   (quiche DEFAULT_INITIAL_RTT = 333000 us)
+  packets lost near migration (+-): 0
+  total packets lost in trace     : 0

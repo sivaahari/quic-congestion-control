@@ -1,0 +1,74 @@
+==========================================================================
+INDEPENDENT RE-VALIDATION OF ALL SURVEY CLAIMS
+fresh code, primary sources, no reuse of project parsers
+==========================================================================
+
+### picoquic
+  [92mPASS         [0m commit == 0dc8ba8b2be3
+                actual 0dc8ba8b2be3
+  [92mPASS         [0m reset hook has 0 dispatches in pristine source
+                found 0
+  [92mPASS         [0m live: cwnd never approaches the initial window
+                min near/after migration 123,888 B = 8.1x initial (15,360)
+  [92mPASS         [0m corrected claim: NOT flat (declined via loss)
+                pre-max 304,566 -> 123,888
+
+### quic-go
+  [92mPASS         [0m commit == 2cfe6ee0b5ac
+                actual 2cfe6ee0b5ac
+  [92mPASS         [0m MigratedPath is reachable (>=1 real call site)
+                2 call sites: connection.go:915, connection.go:1295
+  [92mPASS         [0m live reps with retained data == 5
+                found 5
+  [92mPASS         [0m every retained rep resets to exactly the initial window
+                5/5 at 40,960 B; pre-migration peaks 274,025-280,414
+
+### quiche
+  [92mPASS         [0m commit == e97798e16b3c
+                actual e97798e16b3c
+  [92mPASS         [0m on_connection_migration has 0 call sites (dead)
+                2 textual occurrences, 0 of them calls
+  [92mPASS         [0m live reps == 5
+                found 5
+  [92mPASS         [0m every rep resets to exactly the initial window
+                5/5 at 12,000 B; pre peaks 654,900-654,900
+
+### msquic
+  [92mPASS         [0m commit == 4db8b3987100
+                actual 4db8b3987100
+  [92mPASS         [0m QuicCongestionControlReset is reachable
+                2 call sites: core/connection.c:2043, core/path.c:350
+  [92mPASS         [0m client SetLocalAddr handler contains no CC reset
+                scanned the QUIC_PARAM_CONN_LOCAL_ADDRESS branch
+  [92mPASS         [0m server reset observed in every rep
+                5/5 reach 12,200 B
+  [92mPASS         [0m F6: server srtt pinned at 333,000us after migration
+                5/5 reps pinned across every post-migration sample
+
+### ngtcp2
+  [92mPASS         [0m commit == d7fb3ed0407e
+                actual d7fb3ed0407e
+  [92mPASS         [0m conn_reset_congestion_state call sites == 6
+                found 6 at lines [5183, 5602, 6188, 8879, 8992, 13892]
+  [92mPASS         [0m reset clears RTT as well as cwnd
+                smoothed_rtt/min_rtt/rttvar all assigned
+  [92mPASS         [0m initial window == 12,000 B by the formula
+                recomputed min(10*1200, max(2*1200,14720)) = 12,000
+  [92mPASS         [0m live reps == 5
+                found 5
+  [92mPASS         [0m every rep resets to exactly the initial window
+                5/5 at 12,000 B; pre peaks 532,322-572,685
+  [92mPASS         [0m migration changed the IP, not just the port
+                client logs 'Local address is now [10.0.3.1]' in every rep
+
+### cross-cutting
+  [92mPASS         [0m F3: not one implementation uses the path-validation RTT
+                5/5 are NO or INERT
+  [92mPASS         [0m F1: exactly 2 of 5 ship a dead reset hook
+                dead in: picoquic, quiche
+  [92mPASS         [0m F2: every implementation uses a different mechanism
+                5 distinct mechanisms across 5
+
+==========================================================================
+SUMMARY: 27 PASS, 0 FAIL, 0 UNVERIFIABLE (of 27 checks)
+==========================================================================

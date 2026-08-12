@@ -1,0 +1,7 @@
+Starting Picoquic server (v1.1.51.1) on port 4433, server name = ::, just_once = 1, do_retry = 0
+Accept enable multipath: 0.
+Waiting for packets.
+First connection noticed.
+No more active connections.
+Server exit, ret = 0x0
+Server exit with code = 0

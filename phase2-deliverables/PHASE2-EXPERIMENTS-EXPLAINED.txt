@@ -1,0 +1,577 @@
+===============================================================================
+ PHASE 2 - THE CROSS-IMPLEMENTATION SURVEY, EXPLAINED STEP BY STEP
+ Capstone research: congestion control at QUIC connection migration
+ Compiled 2026-08-09 - revised 2026-08-11 (all five audited; see Part 6)
+===============================================================================
+
+ This document explains every experiment in Phase 2, in the order we ran them,
+ including the failures and the mistakes. For each implementation it states:
+ WHAT we asked, HOW we answered it twice, WHAT we found, and WHICH files prove
+ it.
+
+ Companion documents:
+   PHASE2-PRESENTATION-SCRIPT.md   speaking script for the review
+   PhaseII_Review.pptx             the deck
+   EVIDENCE-FILES.md               what to submit
+   ../phase1-deliverables/         Phase 1, which established the question
+
+ Everything runs in WSL2 Ubuntu 24.04 at /home/sivaa/pvseed.
+ From Windows: \\wsl.localhost\Ubuntu-24.04\home\sivaa\pvseed
+
+
+===============================================================================
+ PART 0 - WHAT PHASE 2 IS, AND WHY
+===============================================================================
+
+ Phase 1 established a question. We found that picoquic - a respected reference
+ implementation - does not perform a reset that RFC 9000 says an endpoint MUST
+ perform when a connection changes network. We then implemented the rule
+ ourselves and discovered that following it PARTLY is worse than ignoring it
+ entirely: transfers went from completing five times out of five to zero out of
+ fifteen.
+
+ That raised the question Phase 2 answers:
+
+     Which QUIC implementations get this right, and how?
+
+ We take five implementations - picoquic, quic-go, quiche, msquic and ngtcp2 -
+ and ask each the same three questions, answering every one twice: once by
+ reading the source code, once by measuring the running program. If the two
+ disagree, we have made a mistake and we go and find it.
+
+ Five implementations, three languages, and between them they carry a large
+ share of the internet's QUIC traffic.
+
+
+===============================================================================
+ PART 1 - THE METHOD
+===============================================================================
+
+ THE THREE QUESTIONS
+ -------------------
+
+ Q1. When a connection moves to a new network, does the implementation reset
+     its congestion controller and RTT estimator to starting values?
+     RFC 9000 section 9.4, second paragraph. Strength: MUST.
+
+ Q2. The protocol already performs a compulsory security check on the new
+     network - send a random number, require it echoed back - which is a free
+     round-trip measurement of that network. Does the implementation use it?
+     RFC 9002 section 6.2.2. Strength: MAY.
+
+ Q3. Does it stop acknowledgements for packets sent on the OLD network from
+     influencing the NEW network's estimates?
+     RFC 9000 section 9.4, first paragraph. Strength: MUST.
+
+
+ WHY WE ANSWER EVERY QUESTION TWICE
+ ----------------------------------
+
+ Source code can lie to you in two directions. Code that looks like it resets
+ may never be called. Code that looks absent may be reached through a function
+ pointer you did not grep for. And a running program can mislead too: a number
+ that looks like a reset may just be an ordinary loss event.
+
+ So each answer needs both. When they agreed, we recorded the answer. When they
+ disagreed, that disagreement WAS the finding - it happened twice, and both
+ times it changed what we concluded.
+
+
+ THE RESET-versus-LOSS DISCRIMINATOR
+ -----------------------------------
+
+ This is the single most important methodological safeguard in Phase 2, and it
+ nearly caught us out.
+
+ When a connection's send-rate setting collapses at a migration, that could be
+ either of two things:
+     (a) a RESET - the implementation obeying the rule, or
+     (b) a LOSS EVENT - ordinary congestion control reacting to dropped packets.
+
+ If those two produce the same number, the observation proves nothing.
+
+ So before claiming anything from a collapse, we look up three constants in the
+ implementation's own source:
+     - its initial congestion window (what a reset would produce)
+     - its minimum congestion window (the floor a loss cascade would reach)
+     - its loss reduction factor (what a single loss event would produce)
+
+ and confirm the observed value can ONLY be explained by a reset.
+
+     quic-go   initial 32 x 1280 = 40,960 B   floor 2,560 B   loss x0.7
+     quiche    initial 10 x 1200 = 12,000 B   floor 2,400 B   loss x0.7
+     msquic    initial 10 x 1220 = 12,200 B   floor 2,440 B   loss x0.7
+     ngtcp2    initial 10 x 1200 = 12,000 B   floor 2,400 B   loss x0.7
+     picoquic  initial 10 x 1536 = 15,360 B   (not needed - it never dropped
+                                               below 8.1x this value)
+
+ In quic-go this mattered enormously. We observed the sequence
+ 279,456 -> 195,619 -> 40,960 bytes. The middle value is EXACTLY 279,456 x 0.7,
+ a Reno loss backoff. So a loss event and a reset both happened, 0.4 ms apart -
+ and only the reset can produce 40,960. Without the discriminator we would have
+ reported one event where there were two.
+
+
+ THE TESTBED
+ -----------
+
+ Reused unchanged from Phase 1, where it was built and validated. Briefly: two
+ independent virtual network paths between a client and a server inside one
+ computer, each with separately controllable speed and delay, with the client
+ able to switch from one to the other on command. The server's address never
+ changes; the client's does - which is what really happens in a handover.
+
+ Standard settings for every Phase 2 trial: both paths 20 Mbit; path A 20 ms
+ delay, path B 40 ms; shaper burst 3200 bytes (a calibrated value - see Phase 1,
+ Experiment 3, for why that number and not another); migration about 5 seconds
+ into a transfer lasting 15-25 seconds.
+
+ The two different delays matter: they let us tell, from the RTT alone, which
+ network an implementation is actually measuring after the switch.
+
+
+===============================================================================
+ PART 2 - IMPLEMENTATION BY IMPLEMENTATION
+===============================================================================
+
+ -----------------------------------------------------------------------------
+ SUBJECT 1 - picoquic (C, private-octopus)
+ commit 0dc8ba8b2be30246720934d3f43a144b372e1a90
+ -----------------------------------------------------------------------------
+
+ ANSWERS   Q1 NO      Q2 present but inert      Q3 NO
+
+ HOW IT IS BUILT
+   One path object per connection. Migrating attaches a new address "tuple" to
+   that same object. Congestion state belongs to the path, not the tuple - so
+   it simply carries across.
+
+ Q1 - VERIFIED FOUR WAYS
+   1. The reset notification is implemented as a handler by all seven of
+      picoquic's congestion-control algorithms, and called by nothing.
+   2. The code that runs at path validation updates RTT, promotes the address,
+      and resets the maximum packet size. It never touches congestion control.
+   3. The congestion window is only re-initialised in algorithm setup and in
+      new-path creation, neither of which runs during ordinary migration.
+   4. Live: the window never came anywhere near a reset. Across an
+      IP-changing migration it declined 241,174 -> 146,592 -> 123,888 bytes
+      through ordinary loss events - a minimum still 8.1 times its
+      15,360-byte initial window, which is what a reset would have produced.
+
+   We later re-ran this entire audit against pristine upstream source pulled
+   directly from git history, so our own later modifications could not
+   contaminate it. Upstream dispatches ten distinct congestion notifications.
+   The reset is not among them.
+
+   SCOPE: this holds for single-path operation, which is the default and what
+   standard migration uses. With multipath enabled a genuinely new path object
+   is created and does get fresh state.
+
+ Q3 - AND WHY IT MATTERS
+   picoquic does not separate old-path from new-path acknowledgements. This is
+   what broke our own compliant implementation in Phase 1: after clearing the
+   estimator, the very next stale reply from the old network re-seeded it at
+   20.3 ms on a path whose true delay was 60 ms.
+
+ EVIDENCE  _build/revalidate_pristine.sh (re-runnable audit)
+           results/raw/_task2_verify/ (both arms, qlog from both ends)
+
+
+ -----------------------------------------------------------------------------
+ SUBJECT 2 - quic-go (Go)
+ commit 2cfe6ee0b5ac905f7f7cecc0f2107d3b7bec2e93  (v0.61.0+8)
+ -----------------------------------------------------------------------------
+
+ ANSWERS   Q1 YES     Q2 NO     Q3 YES
+
+ HOW IT IS BUILT
+   One path object, and an explicit migration handler. Note the historical
+   claim that quic-go does not support connection migration is out of date -
+   it was added in 2025 and has shipped in stable releases since.
+
+ Q1 - EXPLICIT RESET
+   MigratedPath() does not adjust the controller, it REPLACES it with a brand
+   new one, and resets RTT to a fixed 100 ms. It has two live call sites: one
+   client-side, one server-side. Live, across five repetitions, the window went
+   from a peak of 274,025-280,414 bytes to exactly 40,960 - its initial window
+   - every time.
+
+ Q3 - STRUCTURAL, AND ELEGANT
+   quic-go does not try to work out which packets belong to which network.
+   When it migrates, it declares every packet currently in flight lost, and the
+   function that does so sets the array slot to null - actual removal. The
+   iterator that matches incoming acknowledgements skips null entries. So a
+   late reply from the old network is permanently unmatchable. Aggressive, but
+   unambiguously safe.
+
+   Confirmed at runtime: the first RTT measurement after migration was
+   40.4-40.8 ms across five runs, on a path whose true delay is 40 ms. It was
+   measuring the new network, not the old one.
+
+ Q2 - CAUGHT IN THE ACT
+   The client logs a measured probe round-trip of 40.7 ms and then seeds its
+   estimator with the fixed 100 ms default. The measurement is taken and
+   discarded in consecutive log lines.
+
+
+ -----------------------------------------------------------------------------
+ SUBJECT 3 - quiche (Rust, Cloudflare)
+ commit e97798e16b3cfcebedac1a42f7f2434d9a0feac9
+ -----------------------------------------------------------------------------
+
+ ANSWERS   Q1 YES     Q2 NO     Q3 YES
+
+ BUT THE MECHANISM IS COMPLETELY DIFFERENT FROM quic-go's
+   quiche never resets anything. It keeps a separate object per network path,
+   each with its own congestion state. Migrating creates a NEW path, and a new
+   path is simply born at the initial window. Compliance by construction.
+
+   The naive reading - "quiche resets, therefore compliant" - would be wrong in
+   mechanism even though right in outcome. That distinction is the point of
+   this survey.
+
+ THE DEAD HOOK, AGAIN
+   quiche has a function named on_connection_migration(), carrying the comment
+   "Called when connection migrates and cwnd needs to be reset". It has zero
+   call sites and one empty implementation. The same pattern as picoquic, in an
+   unrelated codebase, in a different language.
+
+   The hook that IS called on a path change only runs loss detection on the OLD
+   path. It resets nothing.
+
+ Q3 - THE CLEANEST EVIDENCE IN THE SURVEY
+   Because state is per-path, each path tracks its own RTT. Across five runs:
+   path A measured 20.27-20.53 ms and path B measured 40.21-40.24 ms, against
+   configured delays of 20 ms and 40 ms. Both correct, both separate, no
+   contamination.
+
+ A METHODOLOGICAL CAVEAT WE MUST STATE
+   quiche's logging does NOT tag its congestion measurements with which path
+   they belong to - zero of 98,369 events carried a path identifier. Its time
+   series is therefore a union over both paths. For quiche the reliable
+   per-path evidence is its own statistics output, not the log; the log is
+   corroboration only.
+
+ UNTESTED EDGE CASE
+   Migrating BACK to a previously used path reuses that path object, which
+   still holds its old congestion state. Arguably outside the rule's wording,
+   but against its intent.
+
+
+ -----------------------------------------------------------------------------
+ SUBJECT 4 - msquic (C, Microsoft)
+ commit 4db8b3987100034e9ded68df2c4d3526cbeeeaad  (v2.6.0)
+ -----------------------------------------------------------------------------
+
+ ANSWERS   Q1 ASYMMETRIC     Q2 NO     Q3 SPLIT
+
+ msquic broke the survey's scoring. Neither MUST could be answered yes or no,
+ and we had to add two new categories.
+
+ A FOURTH ARCHITECTURE
+   Congestion control is CONNECTION-WIDE. RTT is PER-PATH. No other surveyed
+   implementation splits them this way.
+
+ Q1 IS ASYMMETRIC - THE ANSWER DEPENDS ON WHICH END YOU ASK
+   The function that promotes a new path DOES reset connection-wide congestion
+   control. Notably it also implements the rule's port-only exemption
+   deliberately - skipping the reset when only the port changed, which is
+   ordinary NAT rebinding rather than a real move. msquic is the only surveyed
+   implementation that does this on purpose.
+
+   But the client's own "change my local address" handler modifies the path in
+   place and never calls that function.
+
+   So the OBSERVING endpoint resets and the MIGRATING endpoint does not. The
+   same connection is simultaneously compliant and non-compliant depending on
+   which end you ask.
+
+   Live, across five runs: the server's window went from about 1,483,000 bytes
+   to exactly 12,200 - its initial window - every time, while the client's sat
+   flat at 96,290 bytes.
+
+ Q3 IS SPLIT - WITH A SMOKING GUN IN msquic's OWN SOURCE
+   RTT measurements ARE correctly excluded by path. Acknowledged byte counts
+   are NOT - the structure carrying them to the congestion controller has no
+   path identifier field at all, and the code hardcodes the first path under a
+   comment written by msquic's own developers:
+
+       const QUIC_PATH* Path = &Connection->Paths[0]; // TODO - Correct?
+
+   They flagged their own uncertainty. We are reporting what that uncertainty
+   turns out to cost.
+
+ THE MOST STRIKING RESULT IN THE SURVEY
+   After migrating, msquic's server never recovers a working RTT estimate. Its
+   smoothed RTT stayed at exactly its 333 ms starting default, and its
+   minimum-RTT field at the "no measurement yet" sentinel, for every one of
+   roughly 3,800 samples per run, across twenty seconds, in five runs out of
+   five. The real network delay was 40 ms.
+
+   The consequence is visible in throughput: about 13 Mbit/s where quic-go
+   achieved about 19 Mbit/s on the same 20 Mbit link.
+
+   The irony is the finding. The endpoint that COMPLIES with the rule ends up
+   with a permanently broken estimate, while the endpoint that does NOT comply
+   keeps a working one.
+
+   HONEST CAVEAT: we read these values through msquic's public statistics API.
+   An instrumented build is still needed to rule out the alternative
+   explanation - that the path swap leaves the polled field stale rather than
+   the estimator being genuinely stuck. We have not done that, so we report the
+   observation and not a diagnosis.
+
+ INSTRUMENTATION - THE HARDEST OF THE FIVE
+   msquic has no usable qlog on Linux; its only qlog code is a post-processor
+   for Windows event traces. We built it with stdout tracing instead and polled
+   its statistics API every 5 ms.
+
+ ONE RUN IN FIVE CRASHED
+   The client aborted after a stale packet addressed to its old location was
+   processed just after the switch, causing the connection to reactively
+   promote the old path back - fighting the migration that had just completed.
+   Characterised from the logs; not root-caused. Reported rather than dropped.
+
+
+ -----------------------------------------------------------------------------
+ SUBJECT 5 - ngtcp2 (C, ngtcp2 project)
+ commit d7fb3ed0407e1333e4ecbd011fcfd9c16499d5e0
+ -----------------------------------------------------------------------------
+
+ ANSWERS   Q1 YES     Q2 NO     Q3 YES
+
+ THE FIFTH ARCHITECTURE - AND THE ONLY SYMMETRIC ONE
+   Congestion state is connection-wide, as in msquic. But where msquic resets
+   at only one end of the connection, ngtcp2 resets wholesale on any path
+   change, at BOTH ends. It is the only implementation in the survey that does.
+
+ Q1 - EXPLICIT, THOROUGH, AND SYMMETRIC
+   conn_reset_congestion_state() resets the congestion window AND the RTT
+   estimator, then dispatches each algorithm's own reset handler. It has six
+   call sites, four of them migration-related, and it fires on both endpoints:
+   the client at ngtcp2_conn.c:13892 inside initiate_immediate_migration, and
+   the observing end at :6188 when path validation promotes a different path.
+
+   The reset itself (conn_reset_conn_stat_cc, ngtcp2_conn.c:906) is the most
+   complete in the survey. It sets the latest RTT to zero, the minimum RTT to
+   its "none measured yet" sentinel, the smoothed RTT to the configured initial
+   value and the variance to half of that, clears the first-sample timestamp
+   and the bytes-in-flight counter, and recomputes the window from
+   ngtcp2_cc_compute_initcwnd.
+
+   Two details show a codebase that has read the specification closely. Setting
+   the RTT variance to half the initial RTT is RFC 9002 Appendix A.3 exactly,
+   where picoquic's own convention uses zero. And the initial window is the
+   RFC 9002 section 7.2 formula implemented literally:
+
+       min(10 x 1200, max(2 x 1200, 14720)) = 12,000 bytes
+
+ Q3 - A PACKET-NUMBER WATERMARK: THE THIRD DISTINCT MECHANISM
+   ngtcp2 neither nulls out old packets the way quic-go does, nor separates
+   state per path the way quiche does. It draws a line by packet number.
+   ngtcp2_rtb_reset_cc_state records cc_pkt_num as the next packet number it
+   will send, documented in its own header at rtb.h:181 as "the smallest packet
+   number that is contributed to congestion control". Three guards - rtb.c:183,
+   470 and 923 - then test whether a packet number is at or above that
+   watermark, so everything sent before the migration is excluded from
+   congestion accounting from that instant onward.
+
+   This is the cleanest answer in the survey to the problem that broke our own
+   Phase 1 patch. picoquic had no way to tell an old-path acknowledgement from
+   a new-path one. ngtcp2 never has to ask: the packet number already says.
+
+ Q2 - NO, THE SAME AS EVERYONE ELSE
+   conn_recv_path_response (ngtcp2_conn.c:6154) validates the challenge and
+   promotes the path without ever touching the RTT estimator. The reset then
+   seeds the smoothed RTT from the configured initial value instead. The
+   measurement is performed and discarded, exactly as in the other four.
+
+ THE HOOK IS ALIVE
+   Where picoquic's and quiche's reset functions have zero callers, ngtcp2's
+   has six. Same rule, same intent, opposite outcome - which is what makes the
+   dead-hook result a pattern in part of the field rather than a universal one.
+
+ LIVE - 5/5, AFTER TWO OBSTACLES WORTH RECORDING
+   The discriminator first: initial window 12,000 bytes, floor 2,400, loss
+   factor 0.7. No sequence of loss events lands on exactly 12,000, so that
+   value can only be a reset.
+
+   Across five repetitions the window went from 532,322-572,685 bytes to
+   exactly 12,000 - its initial window - in five runs out of five.
+
+   OBSTACLE 1: THE BUILD THAT REPORTED SUCCESS AND PRODUCED NOTHING
+   ngtcp2 compiled without error but yielded no working binary. The cause was
+   that an interrupted earlier build had left ZERO-BYTE object files and
+   executables behind, and ninja treats a zero-byte file with a recent
+   timestamp as up to date - so it reported "no work to do" while
+   examples/ptlsclient was zero bytes long. Deleting every zero-byte artefact
+   and rebuilding produced working 2 MB binaries. Recorded here because the
+   build system reports success from beginning to end.
+
+   OBSTACLE 2: THE MIGRATION THAT WAS NOT A MIGRATION
+   ngtcp2's example client exposes --change-local-addr, but gives you no way
+   to say which address to move TO. Reading change_local_addr() at
+   examples/client.cc:1305 shows why: it asks the ROUTING TABLE which local
+   address reaches the server - which in our testbed answers "path A" again,
+   the address it is already using. That is a
+   port-only change, and RFC 9000 section 9.4 explicitly EXEMPTS port-only
+   changes from the reset. We would have measured nothing and concluded
+   something.
+
+   This is the same trap picoquic's demo set in Phase 1, wearing different
+   clothes. It is worth stating plainly: an implementation's own migration
+   demo is not evidence that a migration occurred.
+
+   So the trial flips the client namespace's route to path B a quarter of a
+   second before the migration timer fires. The client then genuinely binds
+   10.0.3.1, confirmed in every repetition by its own log line
+   "Local address is now [10.0.3.1]:<port>". This is also a more faithful model
+   of a real handover than an API call would be - in a real handover the
+   routing table changes and the application follows it.
+
+ EVIDENCE  _build/audit_ngtcp2_1.sh .. audit_ngtcp2_4.sh (source audits)
+           testbed/scenarios/ngtcp2_migrate_demo.sh (the live trial)
+           results/raw/ngtcp2/reps/rep_1 .. rep_5/ (five repetitions)
+
+
+===============================================================================
+ PART 3 - WHAT THE SURVEY FOUND ACROSS ALL OF THEM
+===============================================================================
+
+ (Findings F1-F6. All five implementations are now audited from source and
+ measured live, so the counts below are final for this survey.)
+
+ F1 - TWO OF THE FIVE SHIP A RESET HOOK THAT NOTHING CALLS
+      picoquic and quiche both contain a congestion-reset function named for
+      migration, with zero call sites. quiche's even carries a comment saying
+      what it is for. The other three are reachable: quic-go's has two call
+      sites, msquic's two, ngtcp2's six.
+      Independent codebases, different languages, the same dead code.
+
+ F2 - EVERY IMPLEMENTATION REACHES ITS ANSWER DIFFERENTLY
+      quic-go replaces its controller explicitly. quiche is compliant by
+      construction, because a new path is born at the initial window. picoquic
+      fails because its path object, and therefore its congestion state, is
+      reused. msquic splits congestion from RTT and so resets at one end only.
+      ngtcp2 is connection-wide like msquic, but resets at both ends and
+      excludes old-path packets with a packet-number watermark.
+      Five implementations, five architectures, five different routes.
+
+ F3 - NOBODY USES THE FREE MEASUREMENT
+      All five perform the compulsory path-validation round trip, and not one
+      uses the result. Four seed a fixed default instead; two of those were
+      caught doing it in consecutive log lines. picoquic is the near-miss and
+      still does not use it - the code exists but is gated behind a condition
+      that is never true for the path being migrated.
+
+ F4 - PARTIAL COMPLIANCE IS WORSE THAN NONE  (established in Phase 1)
+      Implementing the reset without the old-path exclusion took transfer
+      completion from 5/5 to 0/15.
+
+ F5 - COMPLIANCE IS NOT BINARY
+      msquic could not be scored yes or no on either MUST. One connection can
+      be compliant at one end and not the other; one implementation can obey
+      the rule for RTT and disobey it for congestion input.
+
+ F6 - IN msquic THE SENDER'S RTT NEVER RECOVERS
+      Twenty seconds, 3,800 samples per run, five runs out of five, and never
+      once a real measurement of the new network.
+
+
+===============================================================================
+ PART 4 - WHAT WE ARE NOT CLAIMING
+===============================================================================
+
+ 1. We have not shown that any of these behaviours harms real users. We measured
+    what implementations do and what it costs in our testbed. Whether that
+    matters at internet scale is a different study.
+
+ 2. Everything is emulation. No real phones, no real cellular networks.
+
+ 3. Where we say "does not comply", we mean against our reading of the RFC text
+    quoted in Part 1. Some of these behaviours may be defensible under a
+    different reading, and we say so where we know of one.
+
+ 4. msquic's stuck-RTT observation is an observation, not a diagnosis. It needs
+    an instrumented build to confirm the mechanism.
+
+ 5. Each implementation was tested in one configuration: one congestion
+    algorithm, one path-delay pair, one direction of transfer. Behaviour may
+    differ elsewhere.
+
+ 6. We tested each implementation at one commit. These are moving projects.
+
+
+===============================================================================
+ PART 5 - HOW TO REPRODUCE ANY OF THIS
+===============================================================================
+
+ All commands run from Windows; each is self-contained.
+
+ Regenerate every figure and the deck from the survey data:
+   wsl -d Ubuntu-24.04 -u root -- bash -c \
+     "cd /home/sivaa/pvseed && python3 analysis/make_survey_figures.py"
+
+ The survey's single source of truth - every answer, mechanism, commit hash and
+ measurement - is one file:
+   /home/sivaa/pvseed/analysis/survey_results.json
+ Every figure and table is generated from it. Nothing is hand-drawn.
+
+ Re-run an implementation's trial (example: quiche):
+   wsl -d Ubuntu-24.04 -u root -- bash \
+     /home/sivaa/pvseed/testbed/scenarios/quiche_migrate_demo.sh
+
+ Re-run the picoquic source audit against pristine upstream:
+   wsl -d Ubuntu-24.04 -u root -- bash \
+     /home/sivaa/pvseed/_build/revalidate_pristine.sh
+
+
+===============================================================================
+ PART 6 - WHAT WE GOT WRONG, AND HOW WE FOUND IT
+===============================================================================
+
+ Before writing any of this up we re-checked every claim, then wrote a SECOND
+ validator from scratch - sharing no code with the analysis pipeline - which
+ re-derives each claim from primary sources: source pulled straight out of git
+ object storage, and raw traces re-parsed with its own parsers for all three
+ qlog formats. It runs 27 checks. All 27 pass.
+
+ It earned its keep. Four claims did not survive, and all four had already been
+ written down before we caught them.
+
+ 1. "picoquic's window stayed flat at 241,174 bytes."
+    WRONG. Re-derived from the trace, it declined 241,174 -> 146,592 ->
+    123,888 bytes through ordinary loss events. The CONCLUSION is unaffected -
+    its minimum was still 8.1 times the initial window, so no reset occurred -
+    but "flat" overstated the evidence and is not repeated anywhere now.
+
+ 2. "quic-go, four repetitions."
+    Actually three. The trial script hardcodes its output directory, so later
+    repeats had silently OVERWRITTEN earlier ones. Resolved by re-running five
+    fresh repetitions through a wrapper that parses and archives each one
+    before starting the next. The current figures are from those five.
+
+ 3. "msquic's client window stayed flat, therefore the client does not reset."
+    Too weak to carry the claim. In a download the client sent 389,341 bytes
+    in total, of which just 16 were stream bytes - it is acknowledgement-only,
+    so its congestion window was never the binding constraint and a flat value
+    is what you would see either way. The claim is true, but it rests on the
+    SOURCE evidence; the live trace only corroborates it. We now say so.
+
+ 4. "msquic's RTT stays stuck because its path gate never re-opens."
+    UNSUPPORTED. path.c:29 assigns each new path a fresh incrementing ID, so
+    packets sent after migration should carry a matching identifier and the
+    gate should open. Why it apparently does not is unknown. The observation
+    stands on its own and is now reported as an observation with no cause
+    attached.
+
+ All four corrections are recorded IN the data itself, in survey_results.json,
+ under keys named _correction_2026_08_11 - with the reason, so that nobody
+ (including us) reintroduces them later.
+
+ The general point is worth stating for the review: a claim that agrees with
+ what you expected is the one to re-check hardest.
+
+===============================================================================
+ END
+===============================================================================

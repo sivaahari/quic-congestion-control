@@ -1,0 +1,314 @@
+diff --git a/picoquic/frames.c b/picoquic/frames.c
+index 44f04b06..c26abb12 100644
+--- a/picoquic/frames.c
++++ b/picoquic/frames.c
+@@ -29,6 +29,56 @@
+ 
+ static const size_t challenge_length = 8;
+ 
++/* --- PV-Seed Task 1 (capstone-research, Phase 1): RFC 9000 9.4 paragraph 1 ---
++ *
++ * pvseed_apply_spec_reset_on_new_peer_addr() (further below, next to
++ * picoquic_decode_path_response_frame()) implements paragraph 2 of RFC 9000
++ * 9.4 -- resetting congestion control and the RTT estimator to their initial
++ * values on a confirmed peer migration. It does NOT by itself satisfy
++ * paragraph 1:
++ *
++ *   "The capacity available on the new path might not be the same as the
++ *    old path. Packets sent on the old path MUST NOT contribute to
++ *    congestion control or RTT estimation for the new path."
++ *
++ * Measured consequence (qlog, step-down scenario): immediately after the
++ * paragraph-2 reset fires, an ACK for a packet that was in flight on the
++ * OLD path arrives and is processed as if it were a new-path sample --
++ * because rtt_is_initialized was just cleared, picoquic_update_path_rtt()
++ * takes its "is_first" branch and seeds smoothed_rtt directly from that
++ * stale, wrong-path sample (e.g. a ~20 ms old-path sample re-seeding the
++ * estimator for a path whose true RTT is ~60 ms), while the same packet's
++ * bytes are simultaneously credited to the congestion window. Slow start
++ * then paces at 3x the new path's true RTT and overshoots its BDP.
++ *
++ * The fix: pvseed_packet_predates_reset() below is a predicate that callers
++ * use to recognize "this acked packet was sent on the old path, before the
++ * reset" so they can skip its RTT/CC contribution -- without touching
++ * anything else about how the ACK is processed (retransmit-queue removal,
++ * flow control, MTU discovery, etc. are unaffected; only the RTT-estimator
++ * and congestion-control inputs are suppressed for these packets). It is
++ * used at both places in this file where an acked packet's send time
++ * currently feeds RTT/CC: picoquic_record_ack_packet_data() (the sole
++ * feeder of the packet_data aggregate consumed by picoquic_update_path_rtt(),
++ * the bandwidth estimator, and the CC "acknowledgement" notification in
++ * process_decoded_packet_data()), and the spurious-retransmission CC
++ * notification in picoquic_check_spurious_retransmission().
++ *
++ * Gated entirely by whether a reset has actually recorded a timestamp on
++ * this path (path_x->pvseed_reset_time_is_set), which itself only happens
++ * inside pvseed_apply_spec_reset_on_new_peer_addr() when PVSEED_SPEC_RESET=1.
++ * With the flag OFF (or before any migration), pvseed_reset_time_is_set is
++ * always 0 (zeroed by the memset() in picoquic_create_path()), so this
++ * predicate is always false and every call site below is a single cheap
++ * bitfield test that changes no behaviour -- the control arm remains
++ * byte-identical to stock picoquic.
++ */
++static int pvseed_packet_predates_reset(const picoquic_path_t* send_path, uint64_t packet_send_time)
++{
++    return send_path != NULL && send_path->pvseed_reset_time_is_set &&
++        packet_send_time < send_path->pvseed_reset_time;
++}
++
+ picoquic_stream_head_t* picoquic_create_missing_streams(picoquic_cnx_t* cnx, uint64_t stream_id, int is_remote)
+ {
+     /* Verify the stream ID control conditions */
+@@ -2674,7 +2724,13 @@ picoquic_packet_t* picoquic_check_spurious_retransmission(picoquic_cnx_t* cnx,
+                     old_path->total_bytes_lost = 0;
+                 }
+ 
+-                if (cnx->congestion_alg != NULL) {
++                /* PV-Seed Task 1: a spurious-retransmission notification can
++                 * still grow/restore the congestion window (e.g. NewReno's
++                 * and Cubic's handlers both do), so it is just as much a
++                 * "contribute to congestion control" event as the
++                 * acknowledgement notification below -- suppress it too when
++                 * this packet was sent on the old path before the reset. */
++                if (cnx->congestion_alg != NULL && !pvseed_packet_predates_reset(old_path, p->send_time)) {
+                     picoquic_per_ack_state_t ack_state = { 0 };
+                     ack_state.pc = pc;
+                     ack_state.lost_packet_number = p->sequence_number;
+@@ -3010,6 +3066,21 @@ void picoquic_record_ack_packet_data(picoquic_packet_data_t* packet_data, picoqu
+     picoquic_path_t* old_path = acked_packet->send_path;
+ 
+     if (old_path != NULL) {
++        /* PV-Seed Task 1 (RFC 9000 9.4 paragraph 1): this function is the
++         * single feeder of packet_data->path_ack[], which process_decoded_
++         * packet_data() below hands to picoquic_update_path_rtt(), the
++         * bandwidth estimator, and the CC "acknowledgement" notification.
++         * If this packet was sent on the old path before the last reset on
++         * this path, skip recording it entirely so none of those three
++         * consumers ever see it -- the ACK is still processed normally for
++         * everything else (retransmit-queue removal, MTU discovery, flow
++         * control, old_path->delivered accounting, all still happen in the
++         * caller, below and around this call). No-op unless
++         * PVSEED_SPEC_RESET=1 and a reset has fired on this path. */
++        if (pvseed_packet_predates_reset(old_path, acked_packet->send_time)) {
++            return;
++        }
++
+         int is_path_limited = picoquic_is_ack_path_limited(old_path, acked_packet);
+ 
+         /* Find the path index in the packet data structure */
+@@ -4909,6 +4980,120 @@ uint8_t * picoquic_format_path_response_frame(uint8_t* bytes, uint8_t* bytes_max
+     return bytes;
+ }
+ 
++/* --- PV-Seed Task 2 (capstone-research, Phase 1): RFC 9000 9.4 reset ---
++ *
++ * Stock picoquic never performs the congestion-control/RTT reset that RFC
++ * 9000 Section 9.4 requires on confirmed peer migration: every congestion
++ * algorithm implements a handler for picoquic_congestion_notification_reset
++ * (newreno.c, cubic.c, bbr.c, bbr1.c, c4.c, fastcc.c, prague.c) but nothing
++ * in the codebase ever dispatches that notification -- it is a dead hook.
++ * Likewise the RTT estimator (smoothed_rtt/rtt_variant/rtt_min) simply
++ * carries over from the old path to the new one across a migration. This
++ * function adds the missing reset, called from the two places where an
++ * endpoint confirms (or, in the NAT-rebinding heuristic case, assumes)
++ * ownership of what is about to become a path's new PRIMARY peer address:
++ *
++ *   1. picoquic_decode_path_response_frame(), below: a non-primary tuple's
++ *      challenge/response round trip has just completed and it is about to
++ *      be promoted to path_x->first_tuple.
++ *   2. picoquic_find_incoming_path() in paths.c: the multipath NAT-rebinding
++ *      heuristic, which promotes a brand-new tuple and marks it verified
++ *      immediately, without waiting for a round trip.
++ *
++ * Both call sites hand this function the OLD (pre-promotion) and NEW peer
++ * addresses of the SAME path object. Applying one symmetric check at both
++ * call sites -- rather than special-casing "server-only" -- naturally
++ * produces the right scoping without asking this code to know which role
++ * (client or server) it is running as: whichever endpoint's path just had
++ * its PEER address change is the one whose sender-side state needs
++ * resetting. In the PV-Seed test harness (client migrates its own local
++ * address; the server's address never changes) that means: a no-op on the
++ * client (its peer -- the server -- did not move) and a real reset on the
++ * server (its peer -- the client -- did move), which is exactly the
++ * behaviour under study.
++ *
++ * Gated behind the PVSEED_SPEC_RESET=1 environment variable, default OFF.
++ * With it unset, this function is one cached getenv() check plus one
++ * pointer/family comparison -- no state is touched, so the control arm
++ * (PVSEED_SPEC_RESET=0) is byte-identical to stock picoquic. Does not touch
++ * the seed_cwin/BDP path (picoquic_validate_bdp_seed / timing.c), which is
++ * separate, already-live machinery reserved for a later phase.
++ */
++void pvseed_apply_spec_reset_on_new_peer_addr(picoquic_cnx_t* cnx, picoquic_path_t* path_x,
++    const struct sockaddr* old_peer_addr, const struct sockaddr* new_peer_addr, uint64_t current_time)
++{
++    static int checked = 0;
++    static int enabled = 0;
++
++    if (!checked) {
++        const char* s = getenv("PVSEED_SPEC_RESET");
++        enabled = (s != NULL && strcmp(s, "1") == 0);
++        checked = 1;
++    }
++    if (!enabled) {
++        return;
++    }
++    if (old_peer_addr == NULL || new_peer_addr == NULL ||
++        old_peer_addr->sa_family == 0 || new_peer_addr->sa_family == 0) {
++        return;
++    }
++    /* RFC 9000 9.4: exempt changes limited to the port number (e.g. NAT
++     * rebinding); only an IP-address change (with or without a port change)
++     * triggers the reset. */
++    if (picoquic_compare_ip_addr(old_peer_addr, new_peer_addr) == 0) {
++        return;
++    }
++
++    /* (i) Congestion controller: dispatch the existing (previously dead)
++     * "reset" notification through the normal alg_notify plumbing, so each
++     * algorithm's own bookkeeping (slow-start state, ssthresh, etc., not
++     * just cwin) is consistently reinitialized. */
++    {
++        picoquic_per_ack_state_t ack_state;
++        memset(&ack_state, 0, sizeof(picoquic_per_ack_state_t));
++        cnx->congestion_alg->alg_notify(cnx, path_x, picoquic_congestion_notification_reset,
++            &ack_state, current_time);
++    }
++    /* Defense in depth: every algorithm's own reset handler is supposed to
++     * set path_x->cwin from its post-reset state (e.g. newreno.c's
++     * picoquic_newreno_reset() does `path_x->cwin = nr_state->nrss.cwin;`),
++     * but -- per the FACT above -- that call chain has never had a live
++     * caller and so has zero real-world test coverage. Assert the RFC
++     * 9002-mandated initial value explicitly, so a latent bug in any one
++     * algorithm's reset handler cannot silently leave the old, larger cwin
++     * in place.
++     */
++    path_x->cwin = PICOQUIC_CWIN_INITIAL;
++
++    /* (ii) RTT estimator: back to the same initial values used when a path
++     * is first created (see picoquic_create_path() in quicctx.c), per
++     * RFC 9002 Appendix A.3 (initialization) / B.3 (reset on PTO / new
++     * path). rtt_max intentionally left untouched -- it is a pure
++     * monitoring statistic, not part of the loss-recovery/CC state RFC 9002
++     * mandates resetting. */
++    path_x->rtt_is_initialized = 0;
++    path_x->smoothed_rtt = PICOQUIC_INITIAL_RTT;
++    path_x->rtt_variant = 0;
++    path_x->rtt_min = 0;
++
++    /* (iii) RFC 9000 9.4 paragraph 1: record this instant so that
++     * pvseed_packet_predates_reset() (top of this file) can recognize and
++     * exclude any ACK for a packet sent on the old path -- before this
++     * reset -- from contributing to the new path's RTT estimation or
++     * congestion control. Without this, an ACK for an old-path packet
++     * arriving shortly after this reset would otherwise be treated as the
++     * new path's first-ever RTT sample (because rtt_is_initialized was just
++     * cleared above) and would inflate cwin, re-seeding both the RTT
++     * estimator and the congestion window from a stale, wrong-path
++     * measurement. See the PV-Seed Task 1 banner comment near the top of
++     * this file for the full rationale and measured evidence. */
++    path_x->pvseed_reset_time = current_time;
++    path_x->pvseed_reset_time_is_set = 1;
++
++    picoquic_log_app_message(cnx, "PV-Seed spec_reset: path %" PRIu64 " congestion/RTT reset on peer address change (cwin -> %" PRIu64 ")",
++        path_x->unique_path_id, path_x->cwin);
++}
++
+ const uint8_t* picoquic_decode_path_response_frame(picoquic_cnx_t* cnx, const uint8_t* bytes, const uint8_t* bytes_max,
+     picoquic_path_t * path_x, uint64_t current_time)
+ {
+@@ -4947,6 +5132,17 @@ const uint8_t* picoquic_decode_path_response_frame(picoquic_cnx_t* cnx, const ui
+                 * or if qualifying data is received, which will happen later.
+                 */
+                 if (previous_tuple != NULL /* && cnx->client_mode */) {
++                    /* PV-Seed Task 2: this promotion IS the "confirmed
++                     * ownership of a new peer address" event -- snapshot the
++                     * pre-promotion (old) and about-to-be-promoted (new)
++                     * peer addresses of this path before first_tuple is
++                     * reassigned below. See pvseed_apply_spec_reset_on_new_peer_addr()
++                     * above for the full rationale; no-op unless
++                     * PVSEED_SPEC_RESET=1. */
++                    pvseed_apply_spec_reset_on_new_peer_addr(cnx, path_x,
++                        (struct sockaddr*)&path_x->first_tuple->peer_addr,
++                        (struct sockaddr*)&tuple->peer_addr, current_time);
++
+                     previous_tuple->next_tuple = tuple->next_tuple;
+                     tuple->next_tuple = path_x->first_tuple;
+                     path_x->first_tuple = tuple;
+diff --git a/picoquic/paths.c b/picoquic/paths.c
+index 729fe3f3..ce0b21d8 100644
+--- a/picoquic/paths.c
++++ b/picoquic/paths.c
+@@ -738,6 +738,19 @@ int picoquic_find_incoming_path(picoquic_cnx_t* cnx,
+                     * and the new address will be demoted.
+                     */
+                     tuple->challenge_verified = 1;
++                    /* PV-Seed Task 2: same "confirmed ownership of a new
++                     * peer address" event as in picoquic_decode_path_response_frame
++                     * (frames.c), but reached here via the immediate
++                     * multipath NAT-rebinding heuristic instead of a
++                     * challenge/response round trip. old_tuple/tuple were
++                     * captured/assigned above, before/at the first_tuple
++                     * promotion, so their peer_addr fields are the correct
++                     * pre/post values. Not exercised by the (non-multipath)
++                     * PV-Seed test scenarios, but included for RFC 9000 9.4
++                     * correctness; no-op unless PVSEED_SPEC_RESET=1. */
++                    pvseed_apply_spec_reset_on_new_peer_addr(cnx, path_x,
++                        (struct sockaddr*)&old_tuple->peer_addr,
++                        (struct sockaddr*)&tuple->peer_addr, current_time);
+                     /* set a challenge on the old tuple to recover from spoofed addresses */
+                     picoquic_set_tuple_challenge(old_tuple, current_time, cnx->quic->use_constant_challenges);
+                     old_tuple->challenge_required = 1;
+diff --git a/picoquic/picoquic_internal.h b/picoquic/picoquic_internal.h
+index 31ab5c81..20f82923 100644
+--- a/picoquic/picoquic_internal.h
++++ b/picoquic/picoquic_internal.h
+@@ -1082,6 +1082,13 @@ typedef struct st_picoquic_path_t {
+     unsigned int is_cca_probing_up : 1; /* congestion control algorithm is seeking more bandwidth */
+     unsigned int rtt_is_initialized : 1; /* RTT was measured at least once. */
+     unsigned int sending_path_cid_blocked_frame : 1; /* Sending a path CID blocked, not acked yet. */
++    /* PV-Seed Task 1 (capstone-research, Phase 1): set by
++     * pvseed_apply_spec_reset_on_new_peer_addr() (frames.c) when an RFC 9000
++     * 9.4 migration reset fires on this path. Guards pvseed_reset_time
++     * below (frames.c initializes both to 0 via memset in
++     * picoquic_create_path(), so this is inert unless PVSEED_SPEC_RESET=1
++     * and a reset has actually happened). */
++    unsigned int pvseed_reset_time_is_set : 1;
+     
+     /* Management of retransmissions in a path.
+      * The "path_packet" variables are used for the RACK algorithm, per path, to avoid
+@@ -1122,6 +1129,17 @@ typedef struct st_picoquic_path_t {
+     uint64_t max_rtt_estimate_in_period;
+     uint64_t min_rtt_estimate_in_period;
+ 
++    /* PV-Seed Task 1 (capstone-research, Phase 1): current_time at the most
++     * recent RFC 9000 9.4 migration reset on this path (see
++     * pvseed_apply_spec_reset_on_new_peer_addr() in frames.c). RFC 9000 9.4
++     * paragraph 1 requires that packets sent on the OLD path not contribute
++     * to congestion control or RTT estimation for the new path; callers use
++     * pvseed_packet_predates_reset() (frames.c) to compare an acked
++     * packet's send_time against this instant. Meaningful only when
++     * pvseed_reset_time_is_set is set; both fields are zeroed by the
++     * memset() in picoquic_create_path() and are otherwise untouched, so
++     * PVSEED_SPEC_RESET=0 behaviour is unaffected. */
++    uint64_t pvseed_reset_time;
+ 
+     /* MTU */
+     size_t send_mtu;
+@@ -1621,6 +1639,16 @@ int picoquic_assign_peer_cnxid_to_tuple(picoquic_cnx_t* cnx, picoquic_path_t* pa
+ void picoquic_reset_path_mtu(picoquic_path_t* path_x);
+ int picoquic_get_path_id_from_unique(picoquic_cnx_t* cnx, uint64_t unique_path_id);
+ 
++/* --- PV-Seed Task 2 (capstone-research, Phase 1) ---
++ * RFC 9000 9.4 compliant congestion-controller/RTT reset on confirmed peer
++ * migration. Runtime-gated behind PVSEED_SPEC_RESET=1 (default OFF, in which
++ * case this call is a no-op single branch and stock behavior is unchanged).
++ * Defined in frames.c, next to picoquic_decode_path_response_frame(); called
++ * from there and from the NAT-rebinding heuristic in paths.c
++ * (picoquic_find_incoming_path()). See the definition for full rationale. */
++void pvseed_apply_spec_reset_on_new_peer_addr(picoquic_cnx_t* cnx, picoquic_path_t* path_x,
++    const struct sockaddr* old_peer_addr, const struct sockaddr* new_peer_addr, uint64_t current_time);
++
+ picoquic_remote_cnxid_stash_t* picoquic_find_or_create_remote_cnxid_stash(picoquic_cnx_t* cnx, uint64_t unique_path_id, int do_create);
+ 
+ /* Management of the CNX-ID stash */

@@ -1,0 +1,5 @@
+rep=1 content_ok=1 migration_ok=1 server_accept_ok=1
+rep=2 content_ok=1 migration_ok=1 server_accept_ok=1
+rep=3 content_ok=1 migration_ok=1 server_accept_ok=1
+rep=4 content_ok=1 migration_ok=1 server_accept_ok=1
+rep=5 content_ok=0 migration_ok=0 server_accept_ok=0

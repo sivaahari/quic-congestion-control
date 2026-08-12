@@ -1,0 +1,170 @@
+[setup] tearing down any pre-existing topology
+[teardown] namespace ns_client not present, skipping
+[teardown] namespace ns_bottle_a not present, skipping
+[teardown] namespace ns_bottle_b not present, skipping
+[teardown] namespace ns_server not present, skipping
+[teardown] complete
+[setup] creating namespace ns_client
+[setup] creating namespace ns_bottle_a
+[setup] creating namespace ns_bottle_b
+[setup] creating namespace ns_server
+[setup] creating veth pair cli_a <-> ba_c (path A, client side)
+[setup] creating veth pair ba_s <-> srv_a (path A, server side)
+[setup] creating veth pair cli_b <-> bb_c (path B, client side)
+[setup] creating veth pair bb_s <-> srv_b (path B, server side)
+[setup] configuring ns_client interfaces
+[setup] configuring ns_bottle_a interfaces
+[setup] configuring ns_bottle_b interfaces
+[setup] configuring ns_server interfaces
+[setup] creating dummy0 (10.0.9.1/32) in ns_server
+[setup] enabling ip_forward on ns_bottle_a and ns_bottle_b
+[setup] configuring source-based routing in ns_client
+[setup] configuring main-table fallback route in ns_client (unbound sockets default to path A)
+[setup] configuring forwarding route in ns_bottle_a
+[setup] configuring forwarding route in ns_bottle_b
+[setup] configuring return routes in ns_server
+[setup] verifying path A: ping 10.0.9.1 from 10.0.1.1
+[setup] path A OK
+[setup][ping-a] PING 10.0.9.1 (10.0.9.1) from 10.0.1.1 : 56(84) bytes of data.
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.120 ms
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.051 ms
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.057 ms
+[setup][ping-a] 
+[setup][ping-a] --- 10.0.9.1 ping statistics ---
+[setup][ping-a] 3 packets transmitted, 3 received, 0% packet loss, time 2063ms
+[setup][ping-a] rtt min/avg/max/mdev = 0.051/0.076/0.120/0.031 ms
+[setup] verifying path B: ping 10.0.9.1 from 10.0.3.1
+[setup] path B OK
+[setup][ping-b] PING 10.0.9.1 (10.0.9.1) from 10.0.3.1 : 56(84) bytes of data.
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.158 ms
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.056 ms
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.053 ms
+[setup][ping-b] 
+[setup][ping-b] --- 10.0.9.1 ping statistics ---
+[setup][ping-b] 3 packets transmitted, 3 received, 0% packet loss, time 2078ms
+[setup][ping-b] rtt min/avg/max/mdev = 0.053/0.089/0.158/0.048 ms
+[setup] verifying unbound (no -I) path: ping 10.0.9.1 using the main-table fallback route
+[setup] unbound path OK (FINDING 1 fallback route working)
+[setup][ping-unbound] PING 10.0.9.1 (10.0.9.1) 56(84) bytes of data.
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.055 ms
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.073 ms
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.062 ms
+[setup][ping-unbound] 
+[setup][ping-unbound] --- 10.0.9.1 ping statistics ---
+[setup][ping-unbound] 3 packets transmitted, 3 received, 0% packet loss, time 2065ms
+[setup][ping-unbound] rtt min/avg/max/mdev = 0.055/0.063/0.073/0.007 ms
+[setup] topology up: both paths (A via ns_bottle_a, B via ns_bottle_b) reach 10.0.9.1; unbound sockets default to path A
+SETUP_EXIT=0
+=== topology up, starting FULL train_length_sweep.sh ===
+Mon Aug  3 07:24:53 PDT 2026
+[train_length_sweep] pre-flight self-test: verifying JSON-reconstruction is lossless vs. a live capture
+PREFLIGHT_OK: reconstruction is lossless (n_gaps=19, median_rate_bps=2006056935)
+[train_length_sweep] pre-flight self-test PASSED -- reconstruction path verified lossless
+[train_length_sweep] topology check OK. path=a client_ip=10.0.1.1
+[train_length_sweep] sweep: K=(5 8 12 20) bursts=(1600 3200) rates=(20 50 100) discard_leading=(0 1 2) reps=7 delay_ms=10 payload=1200
+
+K    Burst(B)  Rate(Mb)  Discard   Configured(bps)  Measured(bps)      RelErr(%)  IQR/Med     Safe(<=10%)
+-------------------------------------------------------------------------------------------------------------
+5    1600      20        0         20000000         20268032           1.340      0.255868    yes
+5    1600      20        1         20000000         20073863           0.369      0.046384    yes
+5    1600      20        2         20000000         20057758           0.289      0.045347    yes
+8    1600      20        0         20000000         20107621           0.538      0.024373    yes
+8    1600      20        1         20000000         20070016           0.350      0.018688    yes
+8    1600      20        2         20000000         20039530           0.198      0.024258    yes
+12   1600      20        0         20000000         20089976           0.450      0.050746    yes
+12   1600      20        1         20000000         20065686           0.328      0.036966    yes
+12   1600      20        2         20000000         20069240           0.346      0.040867    yes
+20   1600      20        0         20000000         20024789           0.124      0.022605    yes
+20   1600      20        1         20000000         20019324           0.097      0.022507    yes
+20   1600      20        2         20000000         20024789           0.124      0.019760    yes
+5    1600      50        0         50000000         51611912           3.224      0.277623    yes
+5    1600      50        1         50000000         50246530           0.493      0.116382    yes
+5    1600      50        2         50000000         50552988           1.106      0.103848    yes
+8    1600      50        0         50000000         50653561           1.307      0.081775    yes
+8    1600      50        1         50000000         50297650           0.595      0.059132    yes
+8    1600      50        2         50000000         50251358           0.503      0.065978    yes
+12   1600      50        0         50000000         50344293           0.689      0.045206    yes
+12   1600      50        1         50000000         50300621           0.601      0.036516    yes
+12   1600      50        2         50000000         50209459           0.419      0.032968    yes
+20   1600      50        0         50000000         50133457           0.267      0.052958    yes
+20   1600      50        1         50000000         50077804           0.156      0.051281    yes
+20   1600      50        2         50000000         50133457           0.267      0.047332    yes
+5    1600      100       0         100000000        96455256           -3.545     0.161527    yes
+5    1600      100       1         100000000        100138073          0.138      0.159524    yes
+5    1600      100       2         100000000        102025953          2.026      0.154000    yes
+8    1600      100       0         100000000        100141101          0.141      0.205989    yes
+8    1600      100       1         100000000        101219205          1.219      0.176525    yes
+8    1600      100       2         100000000        100141101          0.141      0.160539    yes
+12   1600      100       0         100000000        99668974           -0.331     0.145180    yes
+12   1600      100       1         100000000        100647343          0.647      0.117874    yes
+12   1600      100       2         100000000        99668974           -0.331     0.113943    yes
+20   1600      100       0         100000000        98578274           -1.422     0.096235    yes
+20   1600      100       1         100000000        98786985           -1.213     0.078380    yes
+20   1600      100       2         100000000        99100357           -0.900     0.073473    yes
+5    3200      20        0         20000000         31350006           56.750     173.681415  no
+5    3200      20        1         20000000         20510576           2.553      1.119251    yes
+5    3200      20        2         20000000         20120988           0.605      0.045501    yes
+8    3200      20        0         20000000         20351814           1.759      1.080339    yes
+8    3200      20        1         20000000         20110475           0.552      0.296902    yes
+8    3200      20        2         20000000         20060812           0.304      0.027391    yes
+12   3200      20        0         20000000         20209005           1.045      0.043733    yes
+12   3200      20        1         20000000         20167631           0.838      0.039457    yes
+12   3200      20        2         20000000         20082221           0.411      0.034505    yes
+20   3200      20        0         20000000         20093551           0.468      0.037194    yes
+20   3200      20        1         20000000         20073680           0.368      0.034154    yes
+20   3200      20        2         20000000         20056237           0.281      0.032398    yes
+5    3200      50        0         50000000         78237385           56.475     62.650795   no
+5    3200      50        1         50000000         52065921           4.132      1.118272    yes
+5    3200      50        2         50000000         48592014           -2.816     0.376440    yes
+8    3200      50        0         50000000         50742290           1.485      0.856030    yes
+8    3200      50        1         50000000         49946727           -0.107     0.390738    yes
+8    3200      50        2         50000000         50314465           0.629      0.393664    yes
+12   3200      50        0         50000000         51381498           2.763      0.094381    yes
+12   3200      50        1         50000000         50996183           1.992      0.084691    yes
+12   3200      50        2         50000000         50543022           1.086      0.080584    yes
+20   3200      50        0         50000000         50322875           0.646      0.058938    yes
+20   3200      50        1         50000000         50007803           0.016      0.056624    yes
+20   3200      50        2         50000000         49999245           -0.002     0.050008    yes
+5    3200      100       0         100000000        154221045          54.221     25.394766   no
+5    3200      100       1         100000000        106456382          6.456      1.035363    yes
+5    3200      100       2         100000000        105829121          5.829      0.266139    yes
+8    3200      100       0         100000000        109860463          9.860      1.429723    yes
+8    3200      100       1         100000000        102627113          2.627      0.555252    yes
+8    3200      100       2         100000000        99119140           -0.881     0.216702    yes
+12   3200      100       0         100000000        103788662          3.789      0.219187    yes
+12   3200      100       1         100000000        102443042          2.443      0.206316    yes
+12   3200      100       2         100000000        100017112          0.017      0.174420    yes
+20   3200      100       0         100000000        100679914          0.680      0.102388    yes
+20   3200      100       1         100000000        100355058          0.355      0.100212    yes
+20   3200      100       2         100000000        100104780          0.105      0.099610    yes
+-------------------------------------------------------------------------------------------------------------
+[train_length_sweep] raw per-repetition data:  /home/sivaa/pvseed/results/raw/train_length_sweep_raw.csv
+[train_length_sweep] processed per-cell table: /home/sivaa/pvseed/results/processed/train_length_sweep.csv
+
+[train_length_sweep] === Question (c): recommended (burst, discard_leading) for K in {5 8} ===
+
+  K=5:
+    burst= 1600B discard_leading=0  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 1600B discard_leading=1  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 1600B discard_leading=2  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 3200B discard_leading=0  fails for at least one rate  [20Mbit=FAIL, 50Mbit=FAIL, 100Mbit=FAIL]
+    burst= 3200B discard_leading=1  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 3200B discard_leading=2  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+
+  K=8:
+    burst= 1600B discard_leading=0  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 1600B discard_leading=1  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 1600B discard_leading=2  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 3200B discard_leading=0  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 3200B discard_leading=1  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+    burst= 3200B discard_leading=2  WORKS across all tested rates [20Mbit=OK, 50Mbit=OK, 100Mbit=OK] <== CANDIDATE
+
+  OVERALL: at least one (burst, discard_leading) combination keeps short trains within +/-10% across all tested rates -- see CANDIDATE lines above.
+TLS_EXIT=0
+Mon Aug  3 07:26:08 PDT 2026
+[teardown] deleted namespace ns_client
+[teardown] deleted namespace ns_bottle_a
+[teardown] deleted namespace ns_bottle_b
+[teardown] deleted namespace ns_server
+[teardown] complete
+TEARDOWN_EXIT=0

@@ -1,0 +1,45 @@
+# The apparatus lives in WSL at /home/sivaa/pvseed (~22 GB). This repository
+# carries source and derived evidence only; code/ and data/ are populated by
+# code/build/sync_repo.sh. These patterns stop the bulk from ever being added by
+# accident if someone works directly in this tree.
+
+# Cloned upstream implementations -- pinned by commit in data/upstream_commits.txt
+/picoquic/
+/quic-go/
+/quiche/
+/msquic/
+/ngtcp2/
+/picotls/
+/nghttp3/
+
+# Raw capture data (~16 GB) -- summarised by the CSVs in the evidence bundle,
+# with one representative trace per stack included there
+/results/
+*.qlog
+*.sqlog
+*.pcap
+*.pcapng
+
+# ngtcp2's example client emits ~445 MB per run; only extracts are shipped
+client.log
+server.log
+
+# Build output
+build/
+target/
+*.o
+*.a
+*.so
+*.exe
+__pycache__/
+*.pyc
+
+# Rendering scratch (regenerate with code/qa/render_deck.sh)
+deckrender/
+*.pdf.tmp
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*~

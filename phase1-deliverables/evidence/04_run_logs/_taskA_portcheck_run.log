@@ -1,0 +1,93 @@
+[taskA] === tearing down any stale topology, then setting up fresh ===
+[teardown] namespace ns_client not present, skipping
+[teardown] namespace ns_bottle_a not present, skipping
+[teardown] namespace ns_bottle_b not present, skipping
+[teardown] namespace ns_server not present, skipping
+[teardown] complete
+[setup] tearing down any pre-existing topology
+[teardown] namespace ns_client not present, skipping
+[teardown] namespace ns_bottle_a not present, skipping
+[teardown] namespace ns_bottle_b not present, skipping
+[teardown] namespace ns_server not present, skipping
+[teardown] complete
+[setup] creating namespace ns_client
+[setup] creating namespace ns_bottle_a
+[setup] creating namespace ns_bottle_b
+[setup] creating namespace ns_server
+[setup] creating veth pair cli_a <-> ba_c (path A, client side)
+[setup] creating veth pair ba_s <-> srv_a (path A, server side)
+[setup] creating veth pair cli_b <-> bb_c (path B, client side)
+[setup] creating veth pair bb_s <-> srv_b (path B, server side)
+[setup] configuring ns_client interfaces
+[setup] configuring ns_bottle_a interfaces
+[setup] configuring ns_bottle_b interfaces
+[setup] configuring ns_server interfaces
+[setup] creating dummy0 (10.0.9.1/32) in ns_server
+[setup] enabling ip_forward on ns_bottle_a and ns_bottle_b
+[setup] configuring source-based routing in ns_client
+[setup] configuring main-table fallback route in ns_client (unbound sockets default to path A)
+[setup] configuring forwarding route in ns_bottle_a
+[setup] configuring forwarding route in ns_bottle_b
+[setup] configuring return routes in ns_server
+[setup] verifying path A: ping 10.0.9.1 from 10.0.1.1
+[setup] path A OK
+[setup][ping-a] PING 10.0.9.1 (10.0.9.1) from 10.0.1.1 : 56(84) bytes of data.
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.185 ms
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.065 ms
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.075 ms
+[setup][ping-a] 
+[setup][ping-a] --- 10.0.9.1 ping statistics ---
+[setup][ping-a] 3 packets transmitted, 3 received, 0% packet loss, time 2051ms
+[setup][ping-a] rtt min/avg/max/mdev = 0.065/0.108/0.185/0.054 ms
+[setup] verifying path B: ping 10.0.9.1 from 10.0.3.1
+[setup] path B OK
+[setup][ping-b] PING 10.0.9.1 (10.0.9.1) from 10.0.3.1 : 56(84) bytes of data.
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.255 ms
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.076 ms
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.064 ms
+[setup][ping-b] 
+[setup][ping-b] --- 10.0.9.1 ping statistics ---
+[setup][ping-b] 3 packets transmitted, 3 received, 0% packet loss, time 2062ms
+[setup][ping-b] rtt min/avg/max/mdev = 0.064/0.131/0.255/0.087 ms
+[setup] verifying unbound (no -I) path: ping 10.0.9.1 using the main-table fallback route
+[setup] unbound path OK (FINDING 1 fallback route working)
+[setup][ping-unbound] PING 10.0.9.1 (10.0.9.1) 56(84) bytes of data.
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.035 ms
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.072 ms
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.066 ms
+[setup][ping-unbound] 
+[setup][ping-unbound] --- 10.0.9.1 ping statistics ---
+[setup][ping-unbound] 3 packets transmitted, 3 received, 0% packet loss, time 2029ms
+[setup][ping-unbound] rtt min/avg/max/mdev = 0.035/0.057/0.072/0.016 ms
+[setup] topology up: both paths (A via ns_bottle_a, B via ns_bottle_b) reach 10.0.9.1; unbound sockets default to path A
+[taskA] === VARIANT (i): PVSEED_MIGRATE_PORT unset ===
+[run_trial:taskA-unset] shaping path A: down 20mbit / 20ms / 0% loss, burst=3200
+[run_trial:taskA-unset] shaping path B: down 20mbit / 20ms / 0% loss, burst=3200
+[run_trial:taskA-unset] generating 5MB test file
+[run_trial:taskA-unset] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:taskA-unset] server pid=772
+[run_trial:taskA-unset] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 1500000us, spec_reset=0
+[run_trial:taskA-unset] client exited with code 0
+[run_trial:taskA-unset] downloaded file size: 3349772 bytes (expected 5242880)
+[run_trial:taskA-unset] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/_taskA_portcheck/unset/client_stdout.log
+[run_trial:taskA-unset] MIGRATION TRIGGER FIRED
+exit code variant(i): 0
+[taskA] === VARIANT (ii): PVSEED_MIGRATE_PORT=55001 (explicit, different from any likely current port) ===
+[run_trial:taskA-override] shaping path A: down 20mbit / 20ms / 0% loss, burst=3200
+[run_trial:taskA-override] shaping path B: down 20mbit / 20ms / 0% loss, burst=3200
+[run_trial:taskA-override] generating 5MB test file
+[run_trial:taskA-override] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:taskA-override] server pid=810
+[run_trial:taskA-override] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='55001' after 1500000us, spec_reset=0
+[run_trial:taskA-override] client exited with code 0
+[run_trial:taskA-override] downloaded file size: 5242880 bytes (expected 5242880)
+[run_trial:taskA-override] TRANSFER OK
+[run_trial:taskA-override] MIGRATION TRIGGER FIRED
+exit code variant(ii): 0
+[taskA] === tearing down topology ===
+[teardown] deleted namespace ns_client
+[teardown] deleted namespace ns_bottle_a
+[teardown] deleted namespace ns_bottle_b
+[teardown] deleted namespace ns_server
+[teardown] complete
+[taskA] === DONE ===

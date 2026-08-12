@@ -1,0 +1,651 @@
+===============================================================================
+ PHASE 1 - EVERY EXPERIMENT, EXPLAINED STEP BY STEP
+ Capstone research: congestion control at QUIC connection migration
+ Compiled 2026-08-05
+===============================================================================
+
+ This document explains every experiment we ran, in the order we ran them,
+ including the ones that failed and the mistakes we made. For each experiment
+ it states: WHY we ran it, HOW it works, WHAT we measured, WHAT we found, and
+ WHICH files on disk prove it.
+
+ Everything runs inside WSL2 Ubuntu 24.04 at /home/sivaa/pvseed.
+ From Windows that path is:
+     \\wsl.localhost\Ubuntu-24.04\home\sivaa\pvseed
+
+ A companion file, EVIDENCE-FILES.md, lists exactly which files to submit.
+
+
+===============================================================================
+ PART 0 - THE IDEA IN ONE PARAGRAPH
+===============================================================================
+
+ When a phone switches network (Wi-Fi to mobile data), a QUIC connection
+ survives the switch, but it must work out how fast to send on the new network.
+ The QUIC standard (RFC 9000, section 9.4) says an implementation MUST reset
+ its congestion controller when this happens. We built a network testbed,
+ measured what a real implementation actually does, and found it does not
+ reset. We then implemented the rule ourselves and discovered that following
+ it partially is worse than not following it at all.
+
+
+===============================================================================
+ PART 1 - BUILDING AND VALIDATING THE MEASURING INSTRUMENT
+===============================================================================
+
+ Before measuring anything about QUIC, we had to build a fake network we could
+ control, and prove that the fake network behaves the way we think it does.
+ This part produced no findings about QUIC. It exists so that everything in
+ Part 2 can be trusted.
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 0 - Can this computer run the experiments at all?
+ -----------------------------------------------------------------------------
+
+ WHY
+   We needed Linux features that emulate networks: "network namespaces"
+   (isolated virtual network stacks) and "tc" traffic control (which can slow
+   a link down, add delay, and drop packets on demand). WSL2 uses a custom
+   Microsoft kernel that has historically shipped without some of these.
+   We also needed microsecond-accurate timestamps, because at 100 Mbit/s the
+   gap between two packets is only about 96 microseconds.
+
+ HOW
+   Checked the kernel version, confirmed the scheduler modules exist and load,
+   created and destroyed a test namespace, applied a delay to a loopback
+   interface, and measured the system clock source and timer jitter.
+
+ WHAT WE FOUND
+   Kernel 6.6.114.1-microsoft-standard-WSL2. Modules sch_netem, sch_tbf and
+   ifb all present and loadable. Namespaces work. Clock source is "tsc" (the
+   CPU's own timestamp counter - the most accurate option, not a virtualised
+   substitute).
+
+   Timer check: a requested 100-microsecond sleep actually took 148-384
+   microseconds. That sounds alarming, but it only affects programs that try
+   to *generate* precise delays from user space. Our measurements instead read
+   timestamps that the *kernel* attaches to packets as they arrive, which is
+   far more accurate. We confirmed this separately: a configured 10 ms network
+   delay measured 10.072 / 10.085 / 10.107 ms across repeats, with only 14-26
+   microseconds of variation.
+
+ VERDICT
+   PASS. No separate Linux virtual machine needed.
+
+ THINGS WE LEARNED THE HARD WAY (they shaped every later experiment)
+   1. WSL2 shuts its virtual machine down when idle. Network namespaces and
+      the /tmp directory are destroyed between separate commands. Every
+      experiment therefore has to run as ONE self-contained script: build the
+      network, run the test, tear it down, all in a single invocation.
+   2. Piping output through "tail" hides everything until the command
+      finishes. We write output to a file and print the file instead.
+   3. "pkill -f somescript.sh" matches its own command line and kills the
+      shell that ran it. We use a bracketed pattern instead.
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 1 - Building a two-path virtual network
+ -----------------------------------------------------------------------------
+
+ WHY
+   To simulate a phone changing network, we need a client that can reach the
+   same server over two different paths, each with independently controllable
+   speed and delay - and we need the *client's* address to change while the
+   server's address stays fixed, because that is what really happens during a
+   handover.
+
+ HOW
+   Four isolated virtual network stacks ("namespaces") connected by virtual
+   cables:
+
+       ns_client  ---- path A ---->  ns_bottle_a  ---->  ns_server
+                  ---- path B ---->  ns_bottle_b  ---->
+
+   - ns_client has two addresses: 10.0.1.1 (path A) and 10.0.3.1 (path B).
+   - ns_server has ONE fixed service address, 10.0.9.1, on a dummy interface.
+     This models reality: the server does not move, the client does.
+   - The two middle namespaces are where we slow traffic down.
+   - Client routing is "source-based": which path a connection uses is decided
+     by which of its two addresses it sends from. This lets both paths be
+     usable at once, which is needed to model a handover where the old and new
+     networks briefly overlap.
+
+ SCRIPT
+   testbed/topology/setup_topology.sh
+   testbed/topology/teardown_topology.sh
+
+ A REAL PROBLEM WE HIT AND FIXED
+   Source-based routing means a program that does not explicitly choose an
+   address has no route at all. A test hung for 400 seconds because of this
+   before we diagnosed it. We added a fallback route so that unspecified
+   traffic defaults to path A, while explicit choices still work.
+
+ HOW WE PROVED THE TWO PATHS ARE REALLY SEPARATE
+   This mattered more than it sounds. If the fallback route had accidentally
+   captured path B's traffic, both "paths" would secretly have been path A and
+   every migration experiment would have been measuring nothing.
+
+   We set path A to 10 ms delay and path B to 40 ms, then sent traffic
+   explicitly from each address and counted packets on each middle namespace's
+   interface:
+
+     bound to 10.0.1.1 -> path A counter 4, path B counter 0, RTT 10.07 ms
+     bound to 10.0.3.1 -> path A counter 0, path B counter 4, RTT 40.14 ms
+     unbound           -> path A counter 4, path B counter 0, RTT 10.08 ms
+
+   Both the packet counters and the round-trip times agree. The paths are
+   genuinely independent.
+
+ SCRIPT
+   testbed/topology/verify_path_isolation.sh
+   testbed/topology/verify_routing.sh
+ EVIDENCE
+   results/raw/_verify_routing/  (packet captures and counters)
+   results/raw/_verify_routing_output.log
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 2 - Calibrating the network emulator (the trap)
+ -----------------------------------------------------------------------------
+
+ WHY - AND THIS IS THE MOST IMPORTANT METHODOLOGY POINT IN THE PROJECT
+   We slow links down using a "token bucket" shaper. A token bucket has a
+   setting called "burst": an allowance of bytes it lets through at full speed
+   before it starts limiting. If that allowance is larger than the test
+   traffic we send, our traffic passes through completely unshaped.
+
+   We would then be measuring our own simulator's configuration and believing
+   it was the network. Every number downstream would be fiction.
+
+ HOW
+   We send a burst of equal-sized packets back to back down a link of KNOWN
+   speed and measure how far apart they are when they arrive. Physics says
+   that if a link runs at C bits per second and each packet is L bits, the
+   packets must arrive at least L/C seconds apart. So measuring the arrival
+   gaps tells you the link speed - and comparing that against the speed we
+   configured tells us whether the emulator is honest.
+
+   The receiver uses kernel timestamps (SO_TIMESTAMPNS), which the operating
+   system attaches at the moment of arrival, rather than reading a clock in
+   our program afterwards. This matters because of the timer jitter found in
+   Experiment 0.
+
+ TOOL
+   testbed/calibration/udp_train.py  (sender and receiver in one file)
+   testbed/calibration/run_calibration.sh  (the sweep)
+
+ WHAT WE MEASURED
+   Four link speeds (5, 20, 50, 100 Mbit) x five burst settings
+   (1600, 3200, 8000, 32000, 128000 bytes) x 5 repeats = 100 trials.
+
+ WHAT WE FOUND
+   burst 1600 B  -> measured speed within 0.6% of configured. GOOD
+   burst 3200 B  -> within 0.6%. GOOD
+   burst 8000 B  -> median still close, but the spread explodes. MARGINAL
+   burst 32000 B -> measured 39.6 Gbit/s on a 5 Mbit link. CATASTROPHIC
+   burst 128000B -> similar nonsense. CATASTROPHIC
+
+   The catastrophic cases are exactly the predicted trap: the entire test
+   burst (20 packets, about 24,840 bytes) fits inside the allowance and sails
+   through untouched. The 39.6 Gbit/s figure is not a network speed at all -
+   it is how fast the computer can move packets in memory.
+
+ EVIDENCE
+   results/processed/calibration.csv   (20 summary rows)
+   results/raw/calibration_raw.csv     (all 100 individual trials)
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 3 - The other half of the burst question
+ -----------------------------------------------------------------------------
+
+ WHY
+   Experiment 2 only sent 20 packets. A small burst setting might measure
+   correctly on a short test yet strangle a long transfer. We had to check
+   both, because we need the emulator to be honest about speed AND capable of
+   actually delivering that speed.
+
+ HOW
+   Run a 6-second continuous TCP transfer through the shaped link and compare
+   achieved throughput against the configured rate. Note the traffic must flow
+   in the SAME direction as the shaping - we initially got this backwards and
+   measured 32 Gbit/s, because we were shaping the download direction while
+   testing the upload direction.
+
+   Expect about 96% of the configured rate, not 100%: packet headers consume
+   roughly 4% of the wire.
+
+ WHAT WE FOUND (5 repeats each)
+   100 Mbit, burst 1600  -> 82.06 Mbit achieved  = 14.5% BELOW the ceiling
+   100 Mbit, burst 3200  -> 95.21 Mbit achieved  =  0.8% below. FINE
+    50 Mbit, burst 1600  -> 45.11 Mbit achieved  =  6.0% below
+    50 Mbit, burst 3200  -> 47.81 Mbit achieved  =  0.4% below. FINE
+
+   So burst 1600 measures dispersion correctly but throttles real throughput.
+   Burst 3200 does both correctly.
+
+ THE POINT
+   The two tests disagree. Neither alone finds the right answer. The correct
+   setting is where both pass: burst = 3200 bytes.
+
+ EVIDENCE
+   results/processed/sustained.csv
+   results/raw/sustained_raw.csv
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 4 - How short can a measurement burst be?
+ -----------------------------------------------------------------------------
+
+ WHY
+   Related follow-on work would send only a handful of measurement packets,
+   not twenty. A token bucket lets through however many packets fit in its
+   allowance before limiting starts - at burst 3200 that is two packets. Those
+   two arrive unshaped and give nonsense readings. With 20 packets you have 19
+   gaps and two bad ones are easy to ignore. With 5 packets you have only 4
+   gaps and two bad ones is half your data.
+
+ HOW
+   Sweep burst length (5, 8, 12, 20 packets) x burst setting (1600, 3200) x
+   speed (20, 50, 100 Mbit) x how many leading gaps to discard (0, 1, 2),
+   7 repeats per combination.
+
+ WHAT WE FOUND
+   5 packets, discard 0, burst 3200 -> error +56%. BROKEN, exactly as predicted
+   8 packets, discard 2, burst 3200 -> error 0.30% / 0.63% / -0.88%. GOOD
+   12 packets, discard 2            -> similar. GOOD
+
+ CONCLUSION
+   Minimum usable burst is 8 packets with the first two gaps discarded.
+   Five-packet bursts do not work on this emulator.
+
+ EVIDENCE
+   results/processed/train_length_sweep.csv  (72 summary rows)
+   results/raw/train_length_sweep_raw.csv    (504 individual trials)
+
+
+===============================================================================
+ PART 2 - MEASURING WHAT QUIC ACTUALLY DOES
+===============================================================================
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 5 - Building the QUIC implementation under test
+ -----------------------------------------------------------------------------
+
+ WHY
+   We needed a real, respected QUIC implementation whose source we could read
+   and modify. We chose picoquic: it is written in C, implements seven
+   different congestion control algorithms, and is maintained by one of the
+   people who helped author the QUIC standard.
+
+ HOW
+   Built picotls (the encryption library picoquic depends on), then picoquic.
+   Recorded the exact source versions so anyone can reproduce:
+
+     picoquic  commit 0dc8ba8b2be30246720934d3f43a144b372e1a90
+     picotls   commit f07f1c8c68b237f1468bc1f1fe1b68aba3ff23b4
+
+   Then ran picoquic's OWN test suite to confirm the build is healthy before
+   trusting anything we measure with it.
+
+ RESULT
+   548 tests run, 0 failures.
+
+ EVIDENCE
+   results/raw/_task2_full_suite_flag_off.log  (the full test run)
+   results/raw/_tls_full_output.log
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 6 - Reading the source: does it reset, as required?
+ -----------------------------------------------------------------------------
+
+ WHY
+   RFC 9000 section 9.4 says an endpoint MUST reset its congestion controller
+   when a connection migrates. We wanted to know whether picoquic does.
+
+ HOW - FOUR INDEPENDENT CHECKS
+   We deliberately used four different methods, because a single search can
+   easily miss an indirect code path.
+
+   CHECK 1 - Is the reset function ever called?
+     picoquic defines a notification named
+     "picoquic_congestion_notification_reset". We found it appears nine times
+     in the source: eight times as a handler (once in each of newreno, cubic,
+     bbr, bbr1, c4, fastcc, prague, and once more in newreno) and once in the
+     list of possible notifications. It is called ZERO times.
+
+     Every congestion control algorithm implements the reset correctly.
+     Nothing ever asks for it. It is dead code.
+
+   CHECK 2 - What DOES run when a migration completes?
+     The function that handles the end of path validation
+     (picoquic_decode_path_response_frame) marks the path verified, updates
+     the round-trip time, promotes the new address, and resets the maximum
+     packet size. It does not touch congestion control.
+
+   CHECK 3 - Where is the congestion window ever set back to its start value?
+     Only inside congestion control algorithms' own setup routines, and in
+     picoquic_create_path (which builds a brand-new path object). Neither runs
+     during an ordinary migration.
+
+   CHECK 4 - Hunt for indirect dispatch.
+     We specifically looked for ways the first three checks could be wrong:
+     variables holding the reset value, macros expanding to it, casts, and
+     wrapper functions. None exist.
+
+ RE-VALIDATION AGAINST PRISTINE SOURCE (done 2026-08-05)
+   Because we had by then modified picoquic ourselves, we re-ran the whole
+   audit against unmodified upstream source extracted directly from git
+   history, so our own edits could not contaminate the result. We listed every
+   notification actually dispatched anywhere in upstream picoquic. Ten
+   distinct notifications are dispatched. "reset" is not one of them.
+
+ WHY IT HAPPENS (the precise mechanism)
+   picoquic's migration entry point contains this branch:
+
+     if (!cnx->is_multipath_enabled || to_preferred_address) {
+         return picoquic_probe_new_tuple(cnx, cnx->path[0], ...);
+     }
+     ... picoquic_create_path(...)
+
+   In ordinary single-path QUIC - the default, and what standard connection
+   migration uses - migration attaches a new "tuple" (an address pair) to the
+   EXISTING path object. Congestion state belongs to the path, not the tuple,
+   so it simply carries across. Only when multipath mode is enabled does
+   picoquic build a genuinely new path with fresh congestion state.
+
+ HOW TO STATE THE FINDING PRECISELY
+   "In single-path (non-multipath) operation, picoquic's connection migration
+   reuses the existing path object, so congestion control and RTT state
+   persist across the migration and the RFC 9000 section 9.4 reset does not
+   occur. The reset hook, implemented by all seven congestion control
+   algorithms, is never dispatched anywhere in the codebase."
+
+ EVIDENCE
+   _build/revalidate_deadcode.sh   and   _build/revalidate_pristine.sh
+   (re-runnable; they print the full audit)
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 7 - Making a real migration happen, and watching it
+ -----------------------------------------------------------------------------
+
+ WHY
+   Reading source is not proof of runtime behaviour. We needed to watch a real
+   connection migrate and record what the congestion controller did.
+
+ A CRITICAL DETAIL
+   RFC 9000 section 9.4 EXEMPTS changes that only alter the port number (those
+   are usually harmless NAT rebinding, not a real move). So a migration that
+   only changes the port would not test the rule at all. Our migration had to
+   change the IP ADDRESS.
+
+   picoquic's demo program only supports port-only migration, so we copied it
+   and made a minimal change letting it migrate to a different local IP while
+   keeping the port identical - the strictest possible test of the exemption.
+
+ A BUG WE FOUND WHILE DOING THIS
+   The logs claimed "port unchanged" while showing different port numbers.
+   Investigating found two genuine byte-order bugs: picoquic's address
+   printing function prints the port without converting from network byte
+   order, and our own code passed a port in the wrong byte order to a function
+   that stores it raw. Both fixed. After fixing, we confirmed from packet-level
+   records that a genuine IP-only, port-preserved migration is achievable
+   (verified across three independent repeats).
+
+ HOW WE RECORD WHAT HAPPENS
+   QUIC implementations can emit "qlog" files - a standard JSON format
+   recording every packet, every frame, and every change to internal state
+   including the congestion window. We capture qlog from BOTH the client and
+   the server. For a download, the SERVER's log is the important one, because
+   the server is the one sending data and therefore the one whose congestion
+   controller governs speed.
+
+ SCRIPT
+   testbed/scenarios/migrate_demo.sh    (self-contained demonstration)
+   testbed/scenarios/run_migration_trial.sh  (reusable single trial)
+   harness/migrate_client.c             (our modified client)
+
+ WHAT WE SAW
+   64 MB transferred successfully across a mid-transfer address change.
+   Path validation completed in about 40 ms, matching the configured path
+   delay. The congestion window did not change at the migration.
+
+ EVIDENCE
+   results/raw/_migrate_demo/     (qlog from both ends, plus logs)
+   results/raw/_taskA_portcheck/  (the port/IP verification)
+   results/raw/_taskA_repro/      (repeats)
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 8 - Implementing the rule ourselves
+ -----------------------------------------------------------------------------
+
+ WHY
+   To measure what the rule COSTS, we needed a version that follows it. Since
+   picoquic does not provide one, we wrote it.
+
+ HOW
+   Added a function that, when a migration completes:
+     - checks the peer's IP actually changed (not just the port, respecting
+       the RFC's exemption)
+     - dispatches the previously-dead reset notification through picoquic's
+       own congestion control interface
+     - explicitly sets the congestion window to its initial value as a safety
+       net, because those reset handlers had never had a caller and therefore
+       had never been tested
+     - resets the round-trip time estimator to the same initial values
+       picoquic uses when creating a fresh path
+
+   The whole thing is behind an environment variable, PVSEED_SPEC_RESET,
+   default OFF. With it off, behaviour must be identical to unmodified
+   picoquic - otherwise our "control" measurement would not be a control.
+
+ HOW WE PROVED THE CONTROL IS CLEAN
+   Re-ran picoquic's own 548-test suite with the flag off: 548 tests, 0
+   failures, and the migration and NAT-rebinding test output was byte-for-byte
+   identical to before our edit.
+
+ HOW WE PROVED THE FLAG WORKS
+   With the flag on, the qlog shows the congestion window dropping to exactly
+   15,360 bytes at the migration instant. That number is picoquic's initial
+   window (10 packets x 1536 bytes). With the flag off, it only dips to
+   123,888 bytes - and that dip is an ordinary packet-loss reaction, not a
+   reset.
+
+ EVIDENCE
+   results/raw/_task2_verify/   (both arms, qlog from both ends)
+   results/raw/_task2_full_suite_flag_off.log
+   results/raw/_baseline_results_only.txt  and  _afteredit_results_only.txt
+     (the byte-identical before/after test output)
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 9 - The main comparison, and the surprise
+ -----------------------------------------------------------------------------
+
+ WHY
+   With both versions available, we could finally compare them under
+   controlled handovers.
+
+ HOW
+   Two scenarios, chosen because they stress opposite failure modes:
+
+     STEP-UP    slow path -> fast path   (20 Mbit/60 ms -> 100 Mbit/20 ms)
+                Resetting should cost the most here: you throw away a window
+                that was justified and must climb back to a much bigger one.
+
+     STEP-DOWN  fast path -> slow path   (100 Mbit/20 ms -> 20 Mbit/60 ms)
+                Carrying the old window across should be dangerous here: a
+                large window dumped onto a five-times slower link.
+
+   Both arms (rule followed / rule ignored), 5 repeats each, migration about
+   5 seconds into the transfer, qlog captured from both endpoints.
+
+ WHAT WE FOUND - AND IT WAS NOT WHAT WE EXPECTED
+   STEP-DOWN, rule ignored (picoquic as shipped): 5 of 5 transfers completed.
+   STEP-DOWN, rule followed (our version):        0 of 15 attempts completed.
+
+   The version that follows the standard did not merely perform worse. It
+   stopped working. The connection would stall and eventually time out. We ran
+   it fifteen times assuming we had made a mistake. Every run failed the same
+   way.
+
+ EVIDENCE
+   results/processed/baseline_migration.csv  (3185 rows of time series)
+   results/processed/baseline_summary.csv    (20 per-trial summaries)
+   results/raw/baseline/                     (160 files: qlog + logs per trial)
+   results/raw/_baseline_step_down_run.log
+   results/raw/_baseline_step_up_run.log
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 10 - Diagnosing our own mistake
+ -----------------------------------------------------------------------------
+
+ WHY
+   A result that strange is usually a bug in your own work. We went looking.
+
+ HOW
+   Extracted the round-trip-time estimate from the qlog around the migration
+   instant and compared it against the true configured delay of the new path.
+
+ WHAT THE TRACE SHOWED
+
+     t = 5.039542 s   congestion window 15,360 bytes, RTT estimate cleared
+                      <- our reset firing correctly
+     t = 5.041382 s   congestion window 73,744 bytes, RTT estimate 20,286 us
+                      <- only 1.8 milliseconds later
+
+   The new path's true round-trip time is 60 milliseconds. A 20.3 millisecond
+   measurement is physically impossible on it. That reading came from a reply
+   arriving over the OLD network - a packet that was still in flight when we
+   migrated.
+
+ THE CAUSE
+   RFC 9000 section 9.4 contains TWO requirements. We had implemented one:
+
+     "an endpoint MUST immediately reset the congestion controller and
+      round-trip time estimator ... to initial values"
+
+   and missed the other, which appears earlier in the same section:
+
+     "Packets sent on the old path MUST NOT contribute to congestion control
+      or RTT estimation for the new path."
+
+   By clearing the estimator we made it accept the very next sample as
+   authoritative - and the very next sample was a stale reply from the old
+   network. The connection concluded the new path was three times faster than
+   it is, sent three times too fast, overwhelmed the link, and never recovered.
+
+ WHY THIS IS A RESULT RATHER THAN JUST A BUG
+   Following this rule partially is worse than ignoring it entirely: 5 of 5
+   successes versus 0 of 15. The rule is subtle enough that a careful attempt
+   to implement it made things dramatically worse. That is a reason to go and
+   check what other implementations do - which is what the paper proposes.
+
+ EVIDENCE
+   _build/verify_rtt_contamination.sh  (re-runnable; prints the trace above)
+   results/raw/baseline/step_down/specreset/  (the failing trials)
+
+
+ -----------------------------------------------------------------------------
+ EXPERIMENT 11 - A free measurement nobody uses
+ -----------------------------------------------------------------------------
+
+ WHY
+   While diagnosing Experiment 10 we noticed something. Before a connection
+   trusts a new network address, it must run a security check: send a random
+   number, and require it to be echoed back. That check is a compulsory round
+   trip on the new path - which means it measures that path's delay for free.
+
+ HOW
+   Extracted, from the same traces, the time between the security challenge
+   being sent and the reply arriving.
+
+ WHAT WE FOUND
+   Path validation measured:            60.1 ms  (and 60.2 ms in the other arm)
+   True configured delay:               60.0 ms
+   Error:                               0.2%
+
+   In the same trace, at the same moment, the congestion controller's own
+   estimate was 20.1 ms - three times wrong - and while re-learning it peaked
+   at 1,696 ms, twenty-eight times the truth.
+
+ STATUS
+   The standard already permits using this measurement for one narrow purpose.
+   Whether it can be used more broadly is a natural follow-on question. We are
+   deliberately treating it as a section of the paper, not the paper itself,
+   because the standard already allows part of it and the harder part is not
+   yet demonstrated.
+
+ EVIDENCE
+   _build/extract_pv_rtt.sh   (re-runnable; prints the measurements above)
+
+
+===============================================================================
+ PART 3 - WHAT WE ARE NOT CLAIMING
+===============================================================================
+
+ Stated plainly so that nobody has to find these for us:
+
+ 1. We have surveyed ONE implementation. One is not a survey. Four more
+    (quic-go, quiche, msquic, ngtcp2) are needed before generalising.
+
+ 2. We have not shown that any particular fix is worth deploying. We have
+    shown that the current situation is inconsistent and that following the
+    rule naively is harmful.
+
+ 3. Everything is emulation. No real phones, no real cellular networks. Real
+    networks have behaviours (radio scheduling, varying signal) that our
+    testbed does not reproduce.
+
+ 4. Our compliant implementation still fails in the step-down scenario. We
+    diagnosed one cause (stale samples from the old network) but there is
+    evidence of a second cause we have not yet isolated.
+
+ 5. The v1 baseline measurements are contaminated by the bug in Experiment 10
+    and must not be quoted. They are retained only for the record, in
+    results/raw/baseline_v1_contaminated/.
+
+
+===============================================================================
+ PART 4 - HOW TO REPRODUCE ANY OF THIS
+===============================================================================
+
+ All commands run from Windows. Each is self-contained.
+
+ Build the network and prove the paths are separate:
+   wsl -d Ubuntu-24.04 -u root -- bash \
+     /home/sivaa/pvseed/testbed/topology/verify_path_isolation.sh
+
+ Re-run the emulator calibration (Experiments 2-4):
+   wsl -d Ubuntu-24.04 -u root -- bash \
+     /home/sivaa/pvseed/testbed/calibration/run_calibration.sh
+
+ Re-run the source audit (Experiment 6):
+   wsl -d Ubuntu-24.04 -u root -- bash \
+     /home/sivaa/pvseed/_build/revalidate_pristine.sh
+
+ Watch a migration happen (Experiment 7):
+   wsl -d Ubuntu-24.04 -u root -- bash \
+     /home/sivaa/pvseed/testbed/scenarios/migrate_demo.sh
+
+ Show the contamination that broke our implementation (Experiment 10):
+   wsl -d Ubuntu-24.04 -u root -- bash \
+     /home/sivaa/pvseed/_build/verify_rtt_contamination.sh
+
+ Show the free measurement (Experiment 11):
+   wsl -d Ubuntu-24.04 -u root -- bash \
+     /home/sivaa/pvseed/_build/extract_pv_rtt.sh
+
+ Rebuild the figures and the slide deck:
+   wsl -d Ubuntu-24.04 -u root -- bash -c \
+     "cd /home/sivaa/pvseed && python3 analysis/make_figures_v2.py && \
+      python3 analysis/make_deck_v2.py"
+
+===============================================================================
+ END
+===============================================================================

@@ -1,0 +1,383 @@
+[topup+stepdown] === tearing down any stale topology, then setting up fresh ===
+[teardown] namespace ns_client not present, skipping
+[teardown] namespace ns_bottle_a not present, skipping
+[teardown] namespace ns_bottle_b not present, skipping
+[teardown] namespace ns_server not present, skipping
+[teardown] complete
+[setup] tearing down any pre-existing topology
+[teardown] namespace ns_client not present, skipping
+[teardown] namespace ns_bottle_a not present, skipping
+[teardown] namespace ns_bottle_b not present, skipping
+[teardown] namespace ns_server not present, skipping
+[teardown] complete
+[setup] creating namespace ns_client
+[setup] creating namespace ns_bottle_a
+[setup] creating namespace ns_bottle_b
+[setup] creating namespace ns_server
+[setup] creating veth pair cli_a <-> ba_c (path A, client side)
+[setup] creating veth pair ba_s <-> srv_a (path A, server side)
+[setup] creating veth pair cli_b <-> bb_c (path B, client side)
+[setup] creating veth pair bb_s <-> srv_b (path B, server side)
+[setup] configuring ns_client interfaces
+[setup] configuring ns_bottle_a interfaces
+[setup] configuring ns_bottle_b interfaces
+[setup] configuring ns_server interfaces
+[setup] creating dummy0 (10.0.9.1/32) in ns_server
+[setup] enabling ip_forward on ns_bottle_a and ns_bottle_b
+[setup] configuring source-based routing in ns_client
+[setup] configuring main-table fallback route in ns_client (unbound sockets default to path A)
+[setup] configuring forwarding route in ns_bottle_a
+[setup] configuring forwarding route in ns_bottle_b
+[setup] configuring return routes in ns_server
+[setup] verifying path A: ping 10.0.9.1 from 10.0.1.1
+[setup] path A OK
+[setup][ping-a] PING 10.0.9.1 (10.0.9.1) from 10.0.1.1 : 56(84) bytes of data.
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.415 ms
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.103 ms
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.085 ms
+[setup][ping-a] 
+[setup][ping-a] --- 10.0.9.1 ping statistics ---
+[setup][ping-a] 3 packets transmitted, 3 received, 0% packet loss, time 2015ms
+[setup][ping-a] rtt min/avg/max/mdev = 0.085/0.201/0.415/0.151 ms
+[setup] verifying path B: ping 10.0.9.1 from 10.0.3.1
+[setup] path B OK
+[setup][ping-b] PING 10.0.9.1 (10.0.9.1) from 10.0.3.1 : 56(84) bytes of data.
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.307 ms
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.074 ms
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.062 ms
+[setup][ping-b] 
+[setup][ping-b] --- 10.0.9.1 ping statistics ---
+[setup][ping-b] 3 packets transmitted, 3 received, 0% packet loss, time 2002ms
+[setup][ping-b] rtt min/avg/max/mdev = 0.062/0.147/0.307/0.112 ms
+[setup] verifying unbound (no -I) path: ping 10.0.9.1 using the main-table fallback route
+[setup] unbound path OK (FINDING 1 fallback route working)
+[setup][ping-unbound] PING 10.0.9.1 (10.0.9.1) 56(84) bytes of data.
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.046 ms
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.063 ms
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.072 ms
+[setup][ping-unbound] 
+[setup][ping-unbound] --- 10.0.9.1 ping statistics ---
+[setup][ping-unbound] 3 packets transmitted, 3 received, 0% packet loss, time 2017ms
+[setup][ping-unbound] rtt min/avg/max/mdev = 0.046/0.060/0.072/0.010 ms
+[setup] topology up: both paths (A via ns_bottle_a, B via ns_bottle_b) reach 10.0.9.1; unbound sockets default to path A
+[topup+stepdown] --- topup specreset rep3b attempt 1/5 ---
+[run_trial:stepup-specreset-r3b-a1] shaping path A: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepup-specreset-r3b-a1] shaping path B: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepup-specreset-r3b-a1] generating 38MB test file
+[run_trial:stepup-specreset-r3b-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepup-specreset-r3b-a1] server pid=675
+[run_trial:stepup-specreset-r3b-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepup-specreset-r3b-a1] client exited with code 0
+[run_trial:stepup-specreset-r3b-a1] downloaded file size: 39845888 bytes (expected 39845888)
+[run_trial:stepup-specreset-r3b-a1] TRANSFER OK
+[run_trial:stepup-specreset-r3b-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] topup rep3b attempt 1: TRANSFER OK (client_rc=0)
+[topup+stepdown] TOPUP SUCCEEDED after 1 attempt(s) -- results/raw/baseline/step_up/specreset/rep3b/final
+[topup+stepdown] --- step_down naive rep 1 attempt 1/3 ---
+[run_trial:stepdown-naive-r1-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r1-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r1-a1] generating 100MB test file
+[run_trial:stepdown-naive-r1-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r1-a1] server pid=725
+[run_trial:stepdown-naive-r1-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r1-a1] client exited with code 0
+[run_trial:stepdown-naive-r1-a1] downloaded file size: 104857600 bytes (expected 104857600)
+[run_trial:stepdown-naive-r1-a1] TRANSFER OK
+[run_trial:stepdown-naive-r1-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 1 attempt 1: TRANSFER OK (client_rc=0)
+[topup+stepdown] --- step_down naive rep 2 attempt 1/3 ---
+[run_trial:stepdown-naive-r2-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r2-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r2-a1] generating 100MB test file
+[run_trial:stepdown-naive-r2-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r2-a1] server pid=780
+[run_trial:stepdown-naive-r2-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r2-a1] client exited with code 0
+[run_trial:stepdown-naive-r2-a1] downloaded file size: 104857600 bytes (expected 104857600)
+[run_trial:stepdown-naive-r2-a1] TRANSFER OK
+[run_trial:stepdown-naive-r2-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 2 attempt 1: TRANSFER OK (client_rc=0)
+[topup+stepdown] --- step_down naive rep 3 attempt 1/3 ---
+[run_trial:stepdown-naive-r3-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r3-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r3-a1] generating 100MB test file
+[run_trial:stepdown-naive-r3-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r3-a1] server pid=857
+[run_trial:stepdown-naive-r3-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r3-a1] client exited with code 0
+[run_trial:stepdown-naive-r3-a1] downloaded file size: 57891576 bytes (expected 104857600)
+[run_trial:stepdown-naive-r3-a1] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/naive/rep3/attempt1/client_stdout.log
+[run_trial:stepdown-naive-r3-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 3 attempt 1: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down naive rep 3 attempt 2/3 ---
+[run_trial:stepdown-naive-r3-a2] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r3-a2] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r3-a2] generating 100MB test file
+[run_trial:stepdown-naive-r3-a2] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r3-a2] server pid=948
+[run_trial:stepdown-naive-r3-a2] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r3-a2] client exited with code 0
+[run_trial:stepdown-naive-r3-a2] downloaded file size: 57417975 bytes (expected 104857600)
+[run_trial:stepdown-naive-r3-a2] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/naive/rep3/attempt2/client_stdout.log
+[run_trial:stepdown-naive-r3-a2] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 3 attempt 2: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down naive rep 3 attempt 3/3 ---
+[run_trial:stepdown-naive-r3-a3] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r3-a3] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r3-a3] generating 100MB test file
+[run_trial:stepdown-naive-r3-a3] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r3-a3] server pid=1022
+[run_trial:stepdown-naive-r3-a3] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r3-a3] client exited with code 0
+[run_trial:stepdown-naive-r3-a3] downloaded file size: 104857600 bytes (expected 104857600)
+[run_trial:stepdown-naive-r3-a3] TRANSFER OK
+[run_trial:stepdown-naive-r3-a3] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 3 attempt 3: TRANSFER OK (client_rc=0)
+[topup+stepdown] --- step_down naive rep 4 attempt 1/3 ---
+[run_trial:stepdown-naive-r4-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r4-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r4-a1] generating 100MB test file
+[run_trial:stepdown-naive-r4-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r4-a1] server pid=1110
+[run_trial:stepdown-naive-r4-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r4-a1] client exited with code 0
+[run_trial:stepdown-naive-r4-a1] downloaded file size: 57172928 bytes (expected 104857600)
+[run_trial:stepdown-naive-r4-a1] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/naive/rep4/attempt1/client_stdout.log
+[run_trial:stepdown-naive-r4-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 4 attempt 1: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down naive rep 4 attempt 2/3 ---
+[run_trial:stepdown-naive-r4-a2] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r4-a2] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r4-a2] generating 100MB test file
+[run_trial:stepdown-naive-r4-a2] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r4-a2] server pid=1218
+[run_trial:stepdown-naive-r4-a2] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r4-a2] client exited with code 0
+[run_trial:stepdown-naive-r4-a2] downloaded file size: 57371613 bytes (expected 104857600)
+[run_trial:stepdown-naive-r4-a2] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/naive/rep4/attempt2/client_stdout.log
+[run_trial:stepdown-naive-r4-a2] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 4 attempt 2: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down naive rep 4 attempt 3/3 ---
+[run_trial:stepdown-naive-r4-a3] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r4-a3] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r4-a3] generating 100MB test file
+[run_trial:stepdown-naive-r4-a3] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r4-a3] server pid=1276
+[run_trial:stepdown-naive-r4-a3] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r4-a3] client exited with code 0
+[run_trial:stepdown-naive-r4-a3] downloaded file size: 104857600 bytes (expected 104857600)
+[run_trial:stepdown-naive-r4-a3] TRANSFER OK
+[run_trial:stepdown-naive-r4-a3] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 4 attempt 3: TRANSFER OK (client_rc=0)
+[topup+stepdown] --- step_down naive rep 5 attempt 1/3 ---
+[run_trial:stepdown-naive-r5-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r5-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-naive-r5-a1] generating 100MB test file
+[run_trial:stepdown-naive-r5-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=0) on 10.0.9.1:4433
+[run_trial:stepdown-naive-r5-a1] server pid=1332
+[run_trial:stepdown-naive-r5-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=0
+[run_trial:stepdown-naive-r5-a1] client exited with code 0
+[run_trial:stepdown-naive-r5-a1] downloaded file size: 104857600 bytes (expected 104857600)
+[run_trial:stepdown-naive-r5-a1] TRANSFER OK
+[run_trial:stepdown-naive-r5-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down naive rep 5 attempt 1: TRANSFER OK (client_rc=0)
+[topup+stepdown] --- step_down specreset rep 1 attempt 1/3 ---
+[run_trial:stepdown-specreset-r1-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r1-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r1-a1] generating 100MB test file
+[run_trial:stepdown-specreset-r1-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r1-a1] server pid=1383
+[run_trial:stepdown-specreset-r1-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r1-a1] client exited with code 0
+[run_trial:stepdown-specreset-r1-a1] downloaded file size: 57396872 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r1-a1] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep1/attempt1/client_stdout.log
+[run_trial:stepdown-specreset-r1-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 1 attempt 1: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 1 attempt 2/3 ---
+[run_trial:stepdown-specreset-r1-a2] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r1-a2] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r1-a2] generating 100MB test file
+[run_trial:stepdown-specreset-r1-a2] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r1-a2] server pid=1443
+[run_trial:stepdown-specreset-r1-a2] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r1-a2] client exited with code 0
+[run_trial:stepdown-specreset-r1-a2] downloaded file size: 57263389 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r1-a2] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep1/attempt2/client_stdout.log
+[run_trial:stepdown-specreset-r1-a2] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 1 attempt 2: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 1 attempt 3/3 ---
+[run_trial:stepdown-specreset-r1-a3] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r1-a3] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r1-a3] generating 100MB test file
+[run_trial:stepdown-specreset-r1-a3] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r1-a3] server pid=1504
+[run_trial:stepdown-specreset-r1-a3] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r1-a3] client exited with code 0
+[run_trial:stepdown-specreset-r1-a3] downloaded file size: 57439052 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r1-a3] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep1/attempt3/client_stdout.log
+[run_trial:stepdown-specreset-r1-a3] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 1 attempt 3: TRANSFER INCOMPLETE (client_rc=0) -- giving up
+[topup+stepdown] --- step_down specreset rep 2 attempt 1/3 ---
+[run_trial:stepdown-specreset-r2-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r2-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r2-a1] generating 100MB test file
+[run_trial:stepdown-specreset-r2-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r2-a1] server pid=1592
+[run_trial:stepdown-specreset-r2-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r2-a1] client exited with code 0
+[run_trial:stepdown-specreset-r2-a1] downloaded file size: 36898974 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r2-a1] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep2/attempt1/client_stdout.log
+[run_trial:stepdown-specreset-r2-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 2 attempt 1: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 2 attempt 2/3 ---
+[run_trial:stepdown-specreset-r2-a2] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r2-a2] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r2-a2] generating 100MB test file
+[run_trial:stepdown-specreset-r2-a2] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r2-a2] server pid=1643
+[run_trial:stepdown-specreset-r2-a2] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r2-a2] client exited with code 0
+[run_trial:stepdown-specreset-r2-a2] downloaded file size: 57281449 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r2-a2] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep2/attempt2/client_stdout.log
+[run_trial:stepdown-specreset-r2-a2] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 2 attempt 2: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 2 attempt 3/3 ---
+[run_trial:stepdown-specreset-r2-a3] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r2-a3] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r2-a3] generating 100MB test file
+[run_trial:stepdown-specreset-r2-a3] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r2-a3] server pid=1698
+[run_trial:stepdown-specreset-r2-a3] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r2-a3] client exited with code 0
+[run_trial:stepdown-specreset-r2-a3] downloaded file size: 57320809 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r2-a3] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep2/attempt3/client_stdout.log
+[run_trial:stepdown-specreset-r2-a3] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 2 attempt 3: TRANSFER INCOMPLETE (client_rc=0) -- giving up
+[topup+stepdown] --- step_down specreset rep 3 attempt 1/3 ---
+[run_trial:stepdown-specreset-r3-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r3-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r3-a1] generating 100MB test file
+[run_trial:stepdown-specreset-r3-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r3-a1] server pid=1778
+[run_trial:stepdown-specreset-r3-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r3-a1] client exited with code 0
+[run_trial:stepdown-specreset-r3-a1] downloaded file size: 57350447 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r3-a1] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep3/attempt1/client_stdout.log
+[run_trial:stepdown-specreset-r3-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 3 attempt 1: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 3 attempt 2/3 ---
+[run_trial:stepdown-specreset-r3-a2] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r3-a2] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r3-a2] generating 100MB test file
+[run_trial:stepdown-specreset-r3-a2] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r3-a2] server pid=1826
+[run_trial:stepdown-specreset-r3-a2] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r3-a2] client exited with code 0
+[run_trial:stepdown-specreset-r3-a2] downloaded file size: 57172048 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r3-a2] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep3/attempt2/client_stdout.log
+[run_trial:stepdown-specreset-r3-a2] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 3 attempt 2: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 3 attempt 3/3 ---
+[run_trial:stepdown-specreset-r3-a3] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r3-a3] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r3-a3] generating 100MB test file
+[run_trial:stepdown-specreset-r3-a3] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r3-a3] server pid=1887
+[run_trial:stepdown-specreset-r3-a3] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r3-a3] client exited with code 0
+[run_trial:stepdown-specreset-r3-a3] downloaded file size: 57302999 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r3-a3] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep3/attempt3/client_stdout.log
+[run_trial:stepdown-specreset-r3-a3] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 3 attempt 3: TRANSFER INCOMPLETE (client_rc=0) -- giving up
+[topup+stepdown] --- step_down specreset rep 4 attempt 1/3 ---
+[run_trial:stepdown-specreset-r4-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r4-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r4-a1] generating 100MB test file
+[run_trial:stepdown-specreset-r4-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r4-a1] server pid=1960
+[run_trial:stepdown-specreset-r4-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r4-a1] client exited with code 0
+[run_trial:stepdown-specreset-r4-a1] downloaded file size: 57095622 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r4-a1] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep4/attempt1/client_stdout.log
+[run_trial:stepdown-specreset-r4-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 4 attempt 1: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 4 attempt 2/3 ---
+[run_trial:stepdown-specreset-r4-a2] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r4-a2] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r4-a2] generating 100MB test file
+[run_trial:stepdown-specreset-r4-a2] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r4-a2] server pid=2027
+[run_trial:stepdown-specreset-r4-a2] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r4-a2] client exited with code 0
+[run_trial:stepdown-specreset-r4-a2] downloaded file size: 57309891 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r4-a2] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep4/attempt2/client_stdout.log
+[run_trial:stepdown-specreset-r4-a2] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 4 attempt 2: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 4 attempt 3/3 ---
+[run_trial:stepdown-specreset-r4-a3] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r4-a3] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r4-a3] generating 100MB test file
+[run_trial:stepdown-specreset-r4-a3] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r4-a3] server pid=2086
+[run_trial:stepdown-specreset-r4-a3] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r4-a3] client exited with code 0
+[run_trial:stepdown-specreset-r4-a3] downloaded file size: 57351395 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r4-a3] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep4/attempt3/client_stdout.log
+[run_trial:stepdown-specreset-r4-a3] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 4 attempt 3: TRANSFER INCOMPLETE (client_rc=0) -- giving up
+[topup+stepdown] --- step_down specreset rep 5 attempt 1/3 ---
+[run_trial:stepdown-specreset-r5-a1] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r5-a1] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r5-a1] generating 100MB test file
+[run_trial:stepdown-specreset-r5-a1] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r5-a1] server pid=2153
+[run_trial:stepdown-specreset-r5-a1] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r5-a1] client exited with code 0
+[run_trial:stepdown-specreset-r5-a1] downloaded file size: 57077600 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r5-a1] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep5/attempt1/client_stdout.log
+[run_trial:stepdown-specreset-r5-a1] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 5 attempt 1: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 5 attempt 2/3 ---
+[run_trial:stepdown-specreset-r5-a2] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r5-a2] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r5-a2] generating 100MB test file
+[run_trial:stepdown-specreset-r5-a2] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r5-a2] server pid=2216
+[run_trial:stepdown-specreset-r5-a2] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r5-a2] client exited with code 0
+[run_trial:stepdown-specreset-r5-a2] downloaded file size: 56960316 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r5-a2] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep5/attempt2/client_stdout.log
+[run_trial:stepdown-specreset-r5-a2] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 5 attempt 2: TRANSFER INCOMPLETE (client_rc=0) -- retrying
+[topup+stepdown] --- step_down specreset rep 5 attempt 3/3 ---
+[run_trial:stepdown-specreset-r5-a3] shaping path A: down 100mbit / 20ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r5-a3] shaping path B: down 20mbit / 60ms / 0% loss, burst=3200
+[run_trial:stepdown-specreset-r5-a3] generating 100MB test file
+[run_trial:stepdown-specreset-r5-a3] starting picoquicdemo server (PVSEED_SPEC_RESET=1) on 10.0.9.1:4433
+[run_trial:stepdown-specreset-r5-a3] server pid=2286
+[run_trial:stepdown-specreset-r5-a3] starting migrate_client: cc=newreno, migrate -> 10.0.3.1 port_override='' after 5000000us, spec_reset=1
+[run_trial:stepdown-specreset-r5-a3] client exited with code 0
+[run_trial:stepdown-specreset-r5-a3] downloaded file size: 57433430 bytes (expected 104857600)
+[run_trial:stepdown-specreset-r5-a3] TRANSFER INCOMPLETE OR MISSING -- check /home/sivaa/pvseed/results/raw/baseline/step_down/specreset/rep5/attempt3/client_stdout.log
+[run_trial:stepdown-specreset-r5-a3] MIGRATION TRIGGER FIRED
+[topup+stepdown] step_down specreset rep 5 attempt 3: TRANSFER INCOMPLETE (client_rc=0) -- giving up
+[topup+stepdown] === tearing down topology ===
+[teardown] deleted namespace ns_client
+[teardown] deleted namespace ns_bottle_a
+[teardown] deleted namespace ns_bottle_b
+[teardown] deleted namespace ns_server
+[teardown] complete
+[topup+stepdown] === SUMMARY (topup + step_down) ===
+[topup+stepdown] topup step_up/specreset/rep3b: OK
+[topup+stepdown] step_down naive rep1: OK (attempts=1)
+[topup+stepdown] step_down naive rep2: OK (attempts=1)
+[topup+stepdown] step_down naive rep3: OK (attempts=3)
+[topup+stepdown] step_down naive rep4: OK (attempts=3)
+[topup+stepdown] step_down naive rep5: OK (attempts=1)
+[topup+stepdown] step_down specreset rep1: FAILED after 3 attempts
+[topup+stepdown] step_down specreset rep2: FAILED after 3 attempts
+[topup+stepdown] step_down specreset rep3: FAILED after 3 attempts
+[topup+stepdown] step_down specreset rep4: FAILED after 3 attempts
+[topup+stepdown] step_down specreset rep5: FAILED after 3 attempts
+[topup+stepdown] step_down cells: 10, failed: 5
+[topup+stepdown] === DONE ===

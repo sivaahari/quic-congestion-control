@@ -1,0 +1,61 @@
+[setup] tearing down any pre-existing topology
+[teardown] namespace ns_client not present, skipping
+[teardown] namespace ns_bottle_a not present, skipping
+[teardown] namespace ns_bottle_b not present, skipping
+[teardown] namespace ns_server not present, skipping
+[teardown] complete
+[setup] creating namespace ns_client
+[setup] creating namespace ns_bottle_a
+[setup] creating namespace ns_bottle_b
+[setup] creating namespace ns_server
+[setup] creating veth pair cli_a <-> ba_c (path A, client side)
+[setup] creating veth pair ba_s <-> srv_a (path A, server side)
+[setup] creating veth pair cli_b <-> bb_c (path B, client side)
+[setup] creating veth pair bb_s <-> srv_b (path B, server side)
+[setup] configuring ns_client interfaces
+[setup] configuring ns_bottle_a interfaces
+[setup] configuring ns_bottle_b interfaces
+[setup] configuring ns_server interfaces
+[setup] creating dummy0 (10.0.9.1/32) in ns_server
+[setup] enabling ip_forward on ns_bottle_a and ns_bottle_b
+[setup] configuring source-based routing in ns_client
+[setup] configuring main-table fallback route in ns_client (unbound sockets default to path A)
+[setup] configuring forwarding route in ns_bottle_a
+[setup] configuring forwarding route in ns_bottle_b
+[setup] configuring return routes in ns_server
+[setup] verifying path A: ping 10.0.9.1 from 10.0.1.1
+[setup] path A OK
+[setup][ping-a] PING 10.0.9.1 (10.0.9.1) from 10.0.1.1 : 56(84) bytes of data.
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.261 ms
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.058 ms
+[setup][ping-a] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.054 ms
+[setup][ping-a] 
+[setup][ping-a] --- 10.0.9.1 ping statistics ---
+[setup][ping-a] 3 packets transmitted, 3 received, 0% packet loss, time 2055ms
+[setup][ping-a] rtt min/avg/max/mdev = 0.054/0.124/0.261/0.096 ms
+[setup] verifying path B: ping 10.0.9.1 from 10.0.3.1
+[setup] path B OK
+[setup][ping-b] PING 10.0.9.1 (10.0.9.1) from 10.0.3.1 : 56(84) bytes of data.
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.222 ms
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.060 ms
+[setup][ping-b] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.062 ms
+[setup][ping-b] 
+[setup][ping-b] --- 10.0.9.1 ping statistics ---
+[setup][ping-b] 3 packets transmitted, 3 received, 0% packet loss, time 2070ms
+[setup][ping-b] rtt min/avg/max/mdev = 0.060/0.114/0.222/0.075 ms
+[setup] verifying unbound (no -I) path: ping 10.0.9.1 using the main-table fallback route
+[setup] unbound path OK (FINDING 1 fallback route working)
+[setup][ping-unbound] PING 10.0.9.1 (10.0.9.1) 56(84) bytes of data.
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=1 ttl=63 time=0.041 ms
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=2 ttl=63 time=0.067 ms
+[setup][ping-unbound] 64 bytes from 10.0.9.1: icmp_seq=3 ttl=63 time=0.060 ms
+[setup][ping-unbound] 
+[setup][ping-unbound] --- 10.0.9.1 ping statistics ---
+[setup][ping-unbound] 3 packets transmitted, 3 received, 0% packet loss, time 2041ms
+[setup][ping-unbound] rtt min/avg/max/mdev = 0.041/0.056/0.067/0.011 ms
+[setup] topology up: both paths (A via ns_bottle_a, B via ns_bottle_b) reach 10.0.9.1; unbound sockets default to path A
+[teardown] deleted namespace ns_client
+[teardown] deleted namespace ns_bottle_a
+[teardown] deleted namespace ns_bottle_b
+[teardown] deleted namespace ns_server
+[teardown] complete

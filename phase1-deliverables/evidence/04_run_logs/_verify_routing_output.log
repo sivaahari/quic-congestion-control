@@ -1,0 +1,30 @@
+[verify_routing] topology up
+
+[verify_routing] === TEST (a): UNBOUND socket -> must succeed and take PATH A ===
+
+[verify_routing] --- subtest: unbound (expect traffic on cli_a, NOT on cli_b) ---
+[verify_routing] send_rc=0  tx(cli_a): 8 -> 13 (delta=5)   tx(cli_b): 4 -> 5 (delta=1)
+[verify_routing] tcpdump pkts-to-10.0.9.1: cli_a=5  cli_b=0   server-side RX_GOT=5 (sent 5)
+[verify_routing] NOTE(unbound): other interface cli_b tx_packets counter moved by 1 during the window; full unfiltered capture below to identify it (this does NOT by itself fail the test -- tcpdump content to 10.0.9.1, checked above, is the authoritative signal for OUR traffic):
+[verify_routing][tcpdump:cli_b] 07:11:17.798254 da:0c:46:10:b7:9d > ca:92:65:28:c1:70, ARP, length 42: Request who-has 10.0.3.1 tell 10.0.3.2, length 28
+[verify_routing][tcpdump:cli_b] 07:11:17.798270 ca:92:65:28:c1:70 > da:0c:46:10:b7:9d, ARP, length 42: Reply 10.0.3.1 is-at ca:92:65:28:c1:70, length 28
+[verify_routing][tcpdump:cli_b] 
+[verify_routing] PASS(unbound): traffic confirmed on cli_a only, via both counters and tcpdump (protocol-aware capture is authoritative for the OTHER interface; see NOTE above if its raw packet counter also moved)
+
+[verify_routing] === TEST (b): socket explicitly bound to CLI_A_IP (10.0.1.1) -> must take PATH A ===
+
+[verify_routing] --- subtest: bound_a (expect traffic on cli_a, NOT on cli_b) ---
+[verify_routing] send_rc=0  tx(cli_a): 13 -> 18 (delta=5)   tx(cli_b): 5 -> 5 (delta=0)
+[verify_routing] tcpdump pkts-to-10.0.9.1: cli_a=5  cli_b=0   server-side RX_GOT=5 (sent 5)
+[verify_routing] PASS(bound_a): traffic confirmed on cli_a only, via both counters and tcpdump (protocol-aware capture is authoritative for the OTHER interface; see NOTE above if its raw packet counter also moved)
+
+[verify_routing] === TEST (c): socket explicitly bound to CLI_B_IP (10.0.3.1) -> must take PATH B ===
+
+[verify_routing] --- subtest: bound_b (expect traffic on cli_b, NOT on cli_a) ---
+[verify_routing] send_rc=0  tx(cli_b): 5 -> 10 (delta=5)   tx(cli_a): 18 -> 18 (delta=0)
+[verify_routing] tcpdump pkts-to-10.0.9.1: cli_b=5  cli_a=0   server-side RX_GOT=5 (sent 5)
+[verify_routing] PASS(bound_b): traffic confirmed on cli_b only, via both counters and tcpdump (protocol-aware capture is authoritative for the OTHER interface; see NOTE above if its raw packet counter also moved)
+
+[verify_routing] teardown done
+
+[verify_routing] VERDICT: ALL SUBTESTS PASSED -- unbound sockets reach the service via path A; explicit binds are unaffected

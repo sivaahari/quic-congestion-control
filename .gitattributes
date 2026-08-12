@@ -1,0 +1,26 @@
+# Authored on Windows, executed under Linux (WSL2). Without this, git would
+# check the scripts out with CRLF endings and every one of them would fail with
+# "bad interpreter: /bin/bash^M".
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.py   text eol=lf
+*.c    text eol=lf
+*.h    text eol=lf
+*.go   text eol=lf
+*.rs   text eol=lf
+*.cpp  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+*.diff text eol=lf
+*.csv  text eol=lf
+
+# Binary: never touch line endings, never diff as text.
+*.png  binary
+*.jpg  binary
+*.pptx binary
+*.pdf  binary
+*.gz   binary
+*.qlog binary
+*.sqlog binary
