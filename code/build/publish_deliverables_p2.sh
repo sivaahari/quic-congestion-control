@@ -13,6 +13,23 @@ mkdir -p "$DEST/figures"
 cp -f "$SRC/paper/PhaseII_Review.pptx" "$DEST/"
 cp -f "$SRC"/analysis/figures/p2_fig*.png "$DEST/figures/"
 
+# VERIFY THE DESTINATION, not the source. This script used to check only that
+# the source deck was newer than the source figures, and reported "OK" while a
+# cp had silently failed -- Windows can hold an exclusive lock on the .pptx (an
+# open viewer, an indexer, antivirus), cp returns "Permission denied", and the
+# published deck stays a build behind while every check still prints OK.
+fail=0
+for f in "$SRC/paper/PhaseII_Review.pptx" "$SRC"/analysis/figures/p2_fig*.png; do
+    d="$DEST/$(basename "$f")"
+    case "$f" in *fig*.png) d="$DEST/figures/$(basename "$f")";; esac
+    if ! cmp -s "$f" "$d" 2>/dev/null; then
+        echo "PUBLISH FAILED: $(basename "$f") did not reach $d" >&2
+        echo "  the destination is locked or unwritable; close whatever holds it and re-run" >&2
+        fail=1
+    fi
+done
+[ "$fail" -eq 0 ] && echo "destination verified: every file copied byte-for-byte"
+
 echo "=== published ==="
 find "$DEST" -maxdepth 2 -type f -not -path "*/evidence/*" -printf '%-78p %9s B\n' | sort
 

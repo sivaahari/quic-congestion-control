@@ -1,5 +1,5 @@
-# extract from client.log (445203644 bytes)
-# full log retained in the project tree; only migration evidence shipped
+# extracted from client.log (445203644 bytes) before deletion
+# the full log is ~445 MB of per-packet tracing; only migration evidence is kept
 I00000023 0x20580416344653d527d6cec3609c4d20c9 cry remote transport_parameters disable_active_migration=0
 Changing local address
 Local address is now [10.0.3.1]:47997

@@ -53,3 +53,8 @@ deckrender/
 Thumbs.db
 *.swp
 *~
+
+# Office lock files (ONLYOFFICE/LibreOffice) left beside an open document
+.~lock.*#
+# Temporary side-by-side build placed when the canonical deck was locked
+PhaseII_Review.CORRECTED.pptx

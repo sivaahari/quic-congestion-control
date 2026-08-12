@@ -530,6 +530,29 @@ def main():
             if v == "UNVERIFIABLE":
                 print(f"  [{impl}] {claim}  -- {detail}")
     print("=" * 74)
+
+    # Write the tally back into the data file. The deck quotes this number, and
+    # when it was a literal it went stale silently -- the slide still said
+    # "27 checks" after three more had been added. Only the validator's own
+    # count is written; no claim is ever touched.
+    try:
+        with open(CLAIMS_FILE) as fh:
+            doc = json.load(fh)
+        doc["validation"] = {
+            "checks": len(RESULTS),
+            "passed": n_pass,
+            "failed": n_fail,
+            "unverifiable": n_unv,
+            "_comment": "Written by _validation/revalidate_fresh.py on each run. "
+                        "Do not edit by hand -- re-run the validator instead.",
+        }
+        with open(CLAIMS_FILE, "w") as fh:
+            json.dump(doc, fh, indent=2, ensure_ascii=False)
+            fh.write("\n")
+        print(f"(recorded {n_pass}/{len(RESULTS)} into survey_results.json)")
+    except Exception as exc:                      # never fail the run over this
+        print(f"(could not record tally: {exc})")
+
     return 1 if n_fail else 0
 
 

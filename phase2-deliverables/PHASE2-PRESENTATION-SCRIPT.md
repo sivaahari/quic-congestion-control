@@ -179,7 +179,7 @@ You deliver the most striking single result, then establish why the numbers can 
 >
 > And it earned its keep: along the way this process caught six things we'd got wrong. A window we'd described as flat that had actually declined. A repetition count of four that was really three. A piece of live evidence too weak to carry the claim we'd hung on it. A cause we'd asserted without proving. A path delay recorded as sixty milliseconds that was really forty. And — the one that stings — a verdict line in our own parser that would have called a loss event a reset.
 >
-> All four are corrected, and all four are recorded in the data with the reason — so nobody re-introduces them later."
+> All six are corrected, and all six are recorded in the data with the reason — so nobody re-introduces them later."
 
 **Hand over:**
 > "Shafeeq will close."

@@ -5,7 +5,6 @@
     "verified": "source | live | source+live -- how the answer was established",
     "status": "done | in_progress | pending"
   },
-
   "questions": {
     "q1": {
       "short": "Resets congestion control on migration?",
@@ -26,7 +25,6 @@
       "quote": "Packets sent on the old path MUST NOT contribute to congestion control or RTT estimation for the new path"
     }
   },
-
   "implementations": [
     {
       "name": "picoquic",
@@ -75,17 +73,26 @@
         "operating_point": "20 Mbit both paths; path A 20 ms and path B 40 ms one-way netem on the down direction, so true RTTs are ~20 ms and ~40 ms; tbf burst 3200 B; 50 MB transfer; migration at 5 s. This is the Phase-2 standard operating point, identical to the other four implementations.",
         "migration_verified": "IP change 10.0.1.1 -> 10.0.3.1 with the port UNCHANGED, in 5/5 repetitions, confirmed from the server qlog addr_from/addr_to fields rather than from client stdout. An IP change is NOT covered by the RFC 9000 s9.4 port-only exemption, so the requirement is fully engaged.",
         "cwnd_before_bytes": 89352,
-        "cwnd_before_range_bytes": [86904, 89352],
+        "cwnd_before_range_bytes": [
+          86904,
+          89352
+        ],
         "cwnd_before_definition": "the LAST sample before the path-challenge window",
         "cwnd_after_bytes": 8608,
-        "cwnd_after_range_bytes": [2848, 8608],
+        "cwnd_after_range_bytes": [
+          2848,
+          8608
+        ],
         "cwnd_after_definition": "the MINIMUM within the migration window and the second following it",
         "reset_observed": false,
         "reset_observed_reps": "0/5",
         "discriminator": "A reset assigns the initial window EXACTLY -- 15,360 B by picoquic's constant, or 14,240 B from the negotiated 1424 B send size. ZERO samples took either value in any of the five repetitions. The window instead fell BELOW both, reaching exactly 2,848 B (= 2 x 1424 = PICOQUIC_CWIN_MINIMUM) in 2 of 5 reps, about 110 ms after the migration window and alongside 42-58 lost packets. A window below the initial value cannot have been produced BY a reset; that is a loss cascade bottoming out at the floor.",
         "packets_lost_near_migration": "42-58 per repetition",
         "first_post_migration_rtt_ms": 25.96,
-        "first_post_migration_rtt_range_ms": [24.73, 30.23],
+        "first_post_migration_rtt_range_ms": [
+          24.73,
+          30.23
+        ],
         "new_path_true_rtt_ms": 40.0,
         "rtt_reflects": "the old path immediately after migration, converging to the new path over roughly one second",
         "rtt_detail": "srtt 23.4-27.0 ms before migration on the 20 ms path A; 24.7-30.2 ms on the first sample after the migration window, still near path A rather than path B's 40 ms; 40.22-40.44 ms one second later; 40.2-41.0 ms at end of transfer. A compliant implementation would have cleared the estimator to its 250 ms initial RTT and re-measured the new path.",
@@ -96,7 +103,6 @@
       },
       "notes": "Scope: single-path (non-multipath) operation only. With multipath enabled, picoquic_create_path() does produce fresh state."
     },
-
     {
       "name": "quic-go",
       "status": "done",
@@ -140,19 +146,24 @@
       "live": {
         "reps": 5,
         "cwnd_before_bytes": 280414,
-        "cwnd_before_range_bytes": [274025, 280414],
+        "cwnd_before_range_bytes": [
+          274025,
+          280414
+        ],
         "cwnd_after_bytes": 40960,
         "reset_observed": true,
         "reset_observed_reps": "5/5",
         "first_post_migration_rtt_ms": 40.6,
-        "first_post_migration_rtt_range_ms": [40.4, 40.8],
+        "first_post_migration_rtt_range_ms": [
+          40.4,
+          40.8
+        ],
         "new_path_true_rtt_ms": 40.0,
         "rtt_reflects": "new path",
         "_correction_2026_08_11": "History, kept so the numbers are traceable: originally reported as n=4 with a 279,456 B pre-migration window. That was wrong -- the original run's server_metrics.csv had been OVERWRITTEN by later repeats because the trial script hardcodes its output directory, leaving only 3 retained reps. RESOLVED 2026-08-11 by re-running 5 fresh repetitions through _build/quicgo_repeat2.sh, which parses and archives each rep before the next. Current figures are from those 5: peaks 274,025-280,414 -> exactly 40,960 in 5/5, first post-migration RTT 40.4-40.8 ms on a 40 ms path."
       },
       "notes": "No multipath in the codebase, so a single migration code path and no scoping caveat. addrsEqual compares IP AND port, so it resets on any address change -- it does not take the RFC's port-only leniency."
     },
-
     {
       "name": "quiche",
       "status": "done",
@@ -205,7 +216,6 @@
       },
       "notes": "Its qlog does NOT tag metrics with a path id (0 of 98,369 events), so the time series is a union over paths -- per-path evidence comes from path_stats instead. Untested edge case: migrating BACK to a previously-used path reuses that Path object, which retains its old congestion state."
     },
-
     {
       "name": "msquic",
       "status": "done",
@@ -272,7 +282,6 @@
       },
       "notes": "Fourth distinct architecture: congestion control is connection-wide while RTT is per-path. QuicPathSetActive deliberately implements the RFC 9000 s9.4 port-only exemption (UdpPortChangeOnly) - the only surveyed stack to do so on purpose. No usable qlog on Linux (its only qlog code is a Windows ETW post-processor), so instrumentation was stdout tracing plus polling QUIC_PARAM_CONN_STATISTICS_V2; bytes_in_flight unavailable. One rep in five crashed the client with SIGABRT after a stale packet to the old address caused a reactive re-promotion (rebind=1) fighting the just-completed migration - characterised from logs, not root-caused."
     },
-
     {
       "name": "ngtcp2",
       "status": "done",
@@ -318,7 +327,10 @@
       "live": {
         "reps": 5,
         "cwnd_before_bytes": 572685,
-        "cwnd_before_range_bytes": [532322, 572685],
+        "cwnd_before_range_bytes": [
+          532322,
+          572685
+        ],
         "cwnd_after_bytes": 12000,
         "reset_observed": true,
         "reset_observed_reps": "5/5",
@@ -328,7 +340,6 @@
       "notes": "Live measurement OBTAINED 2026-08-11 after fixing the build. Root cause of the earlier failure: an interrupted build had left ZERO-BYTE object files and binaries, which ninja then treated as up to date and refused to regenerate ('no work to do' while examples/ptlsclient was 0 bytes). Deleting every zero-byte artefact and rebuilding produced working binaries. Driving the migration needed one more step: ngtcp2's example client exposes --change-local-addr but not a target address -- change_local_addr() (examples/client.cc:1305) asks the ROUTING TABLE which local address reaches the server, which in this testbed returns path A again, i.e. a port-only change that RFC 9000 s9.4 exempts. The trial therefore flips ns_client's main-table route to path B a quarter-second before the timer fires, so the client genuinely binds 10.0.3.1. That also models a real handover more faithfully than an API call would. Confirmed in every rep by the client's own log line 'Local address is now [10.0.3.1]:<port>'. Notable: its RTT reset sets rttvar = initial_rtt/2, matching RFC 9002 Appendix A.3 exactly, where picoquic's own convention uses 0; and it computes its initial window from the exact RFC 9002 s7.2 formula."
     }
   ],
-
   "cross_cutting_findings": [
     {
       "id": "F1",
@@ -366,5 +377,57 @@
       "detail": "Implementing the reset (2nd paragraph) without old-path sample exclusion (1st paragraph) took transfer completion from 5/5 to 0/15 in our own picoquic patch. Stale old-path ACKs re-seed the freshly cleared estimator, pacing slow start ~3x too fast for the new path.",
       "status": "established in Phase 1"
     }
-  ]
+  ],
+  "_corrections_comment": "Claims that did NOT survive validation, as data rather than prose. The count was previously written by hand into the deck, the README, the script and the experiments document, and it drifted the moment two more were added -- the deck still said 'four' when there were six. Everything that cites a number now derives it from this list. Each entry also names the key under which the full reasoning is stored on the implementation itself.",
+  "corrections": [
+    {
+      "id": "C1",
+      "claim": "picoquic's window stayed flat at 241,174 B",
+      "status": "WRONG",
+      "correction": "It declined 241,174 -> 146,592 -> 123,888 B through ordinary loss. The conclusion was unaffected -- it never took the initial window -- but 'flat' overstated the evidence.",
+      "stored_at": "implementations[picoquic].live._correction_2026_08_11"
+    },
+    {
+      "id": "C2",
+      "claim": "quic-go was measured over four repetitions",
+      "status": "WRONG",
+      "correction": "Three. The trial script hardcoded its output directory, so later repeats overwrote earlier ones. Resolved by re-running five fresh repetitions through an archiving wrapper.",
+      "stored_at": "implementations[quic-go].live._correction_2026_08_11"
+    },
+    {
+      "id": "C3",
+      "claim": "msquic's client window stayed flat, therefore the client does not reset",
+      "status": "TOO WEAK",
+      "correction": "In a download the client is ACK-only (16 stream bytes of 389,341 sent), so a flat window is expected either way. The claim is true but rests on the source audit; the live trace only corroborates.",
+      "stored_at": "implementations[msquic].q1.evidence_strength_caveat"
+    },
+    {
+      "id": "C4",
+      "claim": "msquic's RTT stays stuck because its path gate never re-opens",
+      "status": "UNSUPPORTED",
+      "correction": "path.c:29 assigns each new path a fresh incrementing ID, so the gate should open. Withdrawn; F6 is reported as an observation with no cause attached.",
+      "stored_at": "implementations[msquic].live.rtt_stuck._correction_2026_08_11"
+    },
+    {
+      "id": "C5",
+      "claim": "picoquic's new path had a true RTT of 60 ms",
+      "status": "WRONG",
+      "correction": "60 ms belongs to the step-down scenario and had been copied into the live record by mistake. The run was shaped 20 ms / 40 ms, confirmed by its own shaping logs and by its qlog settling at 41.9 ms.",
+      "stored_at": "implementations[picoquic].live._correction_2026_08_12_rtt"
+    },
+    {
+      "id": "C6",
+      "claim": "parse_qlog.py verdict: cwnd reached the initial window, therefore RESET OCCURRED",
+      "status": "WRONG -- our own tool",
+      "correction": "The test was 'min_cwnd <= initial x 1.05', i.e. at or BELOW the initial window. A window below that value cannot have been set by a reset, which assigns it exactly; below it is a loss cascade. Latent while picoquic ran at 50 Mbit, where the cascade never reached the floor; at 20 Mbit it fired on all five repetitions and would have reversed the headline finding. The independent validator shared the same assumption and was corrected with it.",
+      "stored_at": "implementations[picoquic].live._correction_2026_08_12_parser"
+    }
+  ],
+  "validation": {
+    "checks": 30,
+    "passed": 30,
+    "failed": 0,
+    "unverifiable": 0,
+    "_comment": "Written by _validation/revalidate_fresh.py on each run. Do not edit by hand -- re-run the validator instead."
+  }
 }

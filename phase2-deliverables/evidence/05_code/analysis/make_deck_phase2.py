@@ -164,6 +164,13 @@ nonbinary = [i["name"] for i in DONE_
 _reps = {i["name"]: (i.get("live") or {}).get("reps", 0) for i in DONE_}
 _max_reps = max(_reps.values()) if _reps else 0
 _short = [n for n, r in _reps.items() if r and r < _max_reps]
+# Corrections and validation tallies come from the data too. Both were literals
+# here and both went stale the moment the picoquic work added two corrections
+# and three checks -- the slide still claimed "four things" and "27 checks".
+n_corr = len(D.get("corrections") or [])
+_val = D.get("validation") or {}
+n_checks = _val.get("checks", "?")
+n_pass = _val.get("passed", "?")
 
 # ------------------------------------------------------------------ 1 title
 s = s_()
@@ -314,13 +321,15 @@ p_(tf, "Before trusting any drop in the send rate, we looked up each "
        "factor, and confirmed the number we saw could only be a reset. In one "
        "case that revealed a loss event and a reset happening 0.4 milliseconds "
        "apart, where we would otherwise have reported one.", size=17, after=14)
-p_(tf, "Then we wrote a second validator from scratch, sharing no code with the "
-       "first, which re-derives every claim from git object storage and raw "
-       "traces. 27 checks, 27 pass.", size=17, after=14)
-p_(tf, "It found four things we had got wrong along the way — a window described "
-       "as flat when it had declined, a repetition count of four that was really "
-       "three, a piece of live evidence too weak to carry its claim, and a cause "
-       "we had asserted without proof. All four are corrected and recorded.",
+p_(tf, f"Then we wrote a second validator from scratch, sharing no code with the "
+       f"first, which re-derives every claim from git object storage and raw "
+       f"traces. {n_checks} checks, {n_pass} pass.", size=17, after=14)
+p_(tf, f"It found {word(n_corr, cap=False)} things we had got wrong along the way "
+       f"— a window described as flat when it had declined, a repetition count of "
+       f"four that was really three, a path delay recorded as sixty milliseconds "
+       f"that was really forty, and — the one that stings — a verdict line in our "
+       f"own parser that would have called a loss event a reset. All "
+       f"{word(n_corr, cap=False)} are corrected and recorded.",
    size=17, color=BLUE, bold=True)
 
 # ------------------------------------------------------------------ 12 honesty

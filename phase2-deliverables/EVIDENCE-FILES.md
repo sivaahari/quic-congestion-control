@@ -28,7 +28,7 @@ If you can only point at a handful, point at these.
 
 ### `01_survey_data/` — the findings
 
-- **`survey_results.json`** — authoritative record: per-implementation answers with mechanism and evidence, commit hashes, discriminator constants, live results, the six cross-cutting findings, and every correction made during validation.
+- **`survey_results.json`** — authoritative record: per-implementation answers with mechanism and evidence, commit hashes, discriminator constants, live results, the six cross-cutting findings, a `corrections` list of every claim that did not survive validation, and a `validation` block the validator writes itself on each run.
 - **`survey_table.csv`** — the same thing flattened to one row per implementation, for reading or pasting into a report.
 
 ### `02_source_audits/` — 12 re-runnable audit scripts
@@ -86,4 +86,4 @@ Three answers, in increasing strength:
 
 1. **Every claim was answered twice** — once from source, once from measurement — and they had to agree.
 2. **The reset-vs-loss discriminator.** A drop to the initial window only proves a reset if an ordinary loss event could not produce the same number. We looked up each implementation's initial window, loss floor and reduction factor and confirmed it. In quic-go that revealed a loss event and a reset 0.4 ms apart, where we would otherwise have reported one.
-3. **An independent validator**, written from scratch, re-derives all 30 checks from primary sources and passes all of them. It also caught four things we had got wrong along the way — all corrected, all recorded with their reasons in `survey_results.json`.
+3. **An independent validator**, written from scratch, re-derives all 30 checks from primary sources and passes all of them. It also caught six things we had got wrong along the way — including a verdict line in our own parser that would have called a loss event a reset. All six are corrected and recorded, with their reasons, in the `corrections` list in `survey_results.json`.

@@ -562,7 +562,7 @@
  object storage, and raw traces re-parsed with its own parsers for all three
  qlog formats. It runs 30 checks. All 30 pass.
 
- It earned its keep. Four claims did not survive, and all four had already been
+ It earned its keep. Six claims did not survive, and all six had already been
  written down before we caught them.
 
  1. "picoquic's window stayed flat at 241,174 bytes."
@@ -611,7 +611,7 @@
     loss case separately. An early version of the independent validator made
     the same assumption and was corrected with it.
 
- All four corrections are recorded IN the data itself, in survey_results.json,
+ All six corrections are recorded IN the data itself, in survey_results.json,
  under keys named _correction_2026_08_11 - with the reason, so that nobody
  (including us) reintroduces them later.
 

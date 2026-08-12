@@ -787,7 +787,7 @@ Upstream implementations are **not** vendored. They are pinned by commit in
 
 ## 11. Record of corrections
 
-Four claims did not survive the validation pass. All four had already been written
+Six claims did not survive the validation pass. All six had already been written
 down before they were caught. They are recorded here, and in the data file under
 `_correction_*` keys with their reasoning, so that they are not reintroduced.
 

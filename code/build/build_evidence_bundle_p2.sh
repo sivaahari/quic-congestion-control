@@ -63,16 +63,25 @@ for i in 1 2 3 4 5; do
           "$OUT/03_live_measurements/msquic/rep${i}_server.csv" 2>/dev/null
     cp -f "$P/results/raw/msquic/migrate_demo/rep_$i/client_metrics.csv" \
           "$OUT/03_live_measurements/msquic/rep${i}_client.csv" 2>/dev/null
-    # ngtcp2's example client logs every packet: ~445 MB per run. Ship only the
-    # lines that evidence the migration, not the whole trace.
-    SRC="$P/results/raw/ngtcp2/reps/rep_$i/client.log"
-    if [ -f "$SRC" ]; then
+    # ngtcp2's example client logged every packet: ~445 MB per run. Only the
+    # migration evidence was ever shipped, and the giant logs were removed by
+    # _build/cleanup_project.sh -- which extracted those lines to
+    # client_migration_evidence.txt FIRST. Prefer that extract; fall back to the
+    # raw log if someone re-runs the trial and it exists again.
+    RAW="$P/results/raw/ngtcp2/reps/rep_$i/client.log"
+    PRE="$P/results/raw/ngtcp2/reps/rep_$i/client_migration_evidence.txt"
+    DST="$OUT/03_live_measurements/ngtcp2/rep${i}_migration_evidence.txt"
+    if [ -f "$RAW" ]; then
         {
-            echo "# extract from $(basename "$SRC") ($(stat -c%s "$SRC") bytes)"
-            echo "# full log retained in the project tree; only migration evidence shipped"
+            echo "# extract from client.log ($(stat -c%s "$RAW") bytes)"
+            echo "# only migration evidence is shipped, not the whole trace"
             grep -aiE "Changing local address|Local address is now|path validation|migrat" \
-                 "$SRC" 2>/dev/null | head -40
-        } > "$OUT/03_live_measurements/ngtcp2/rep${i}_migration_evidence.txt"
+                 "$RAW" 2>/dev/null | head -40
+        } > "$DST"
+    elif [ -s "$PRE" ]; then
+        cp -f "$PRE" "$DST"
+    else
+        echo "  WARNING: no ngtcp2 migration evidence for rep $i" >&2
     fi
 done
 cp -f "$P/results/raw/quiche/migrate_demo/rep_"*/server_summary.txt "$OUT/03_live_measurements/quiche/" 2>/dev/null
@@ -114,7 +123,9 @@ cat "$OUT/05_code/commit_hashes.txt"
 echo
 echo "=== 06 sample traces (one per stack, gzipped) ==="
 gz() { [ -f "$1" ] && gzip -c "$1" > "$OUT/06_sample_traces/$2.gz"; }
-gz "$(ls -S "$P"/results/raw/_task2_verify/naive/qlog_server/*.qlog 2>/dev/null | head -1)" picoquic_server.qlog
+# Sample from the CURRENT five repetitions, not the superseded Phase-1 run --
+# a reviewer opening the sample trace should be opening the measurement we report.
+gz "$(ls -S "$P"/results/raw/picoquic/reps/rep_*/qlog_server/*.qlog 2>/dev/null | head -1)" picoquic_server.qlog
 gz "$(ls -S "$P"/results/raw/quicgo/migrate_demo/qlog_server/*.sqlog 2>/dev/null | head -1)" quicgo_server.sqlog
 gz "$(ls -S "$P"/results/raw/quiche/migrate_demo/rep_1/qlog_server/*.sqlog 2>/dev/null | head -1)" quiche_server.sqlog
 gz "$(ls -S "$P"/results/raw/ngtcp2/reps/rep_1/qlog_server/*.sqlog 2>/dev/null | head -1)" ngtcp2_server.sqlog
