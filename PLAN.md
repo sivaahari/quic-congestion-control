@@ -417,7 +417,7 @@ Rationale: ships NewReno, CUBIC, and BBR in-tree (all three Tier-A hosts in one 
 1. `picoquic_congestion_notification_reset` (`picoquic.h:1794`) has switch-case handlers in newreno, cubic, bbr, bbr1, c4, fastcc, prague — and **zero callers**. A dead hook.
 2. `picoquic_decode_path_response_frame` sets `challenge_verified`, calls `picoquic_update_path_rtt(..., epoch=-1, ...)`, promotes the tuple, and calls `picoquic_reset_path_mtu(path_x)` — **MTU only**.
 3. `cwin = PICOQUIC_CWIN_INITIAL` appears only inside CC-init functions and `picoquic_create_path` (`quicctx.c:1907`) — neither on the single-path migration route. Single-path migration creates a new *tuple* on the existing path object, so `cwin` survives by construction.
-4. Live qlog across a real IP-changing migration: cwnd flat at **241,174 B** through the entire challenge/response window, never near `PICOQUIC_CWIN_INITIAL` = 15,360 B (10 × `PICOQUIC_MAX_PACKET_SIZE` = 1536).
+4. Live qlog across real IP-changing migrations (5 repetitions at the standard operating point): the window never once takes the value a reset would assign - `PICOQUIC_CWIN_INITIAL` = 15,360 B (10 x `PICOQUIC_MAX_PACKET_SIZE` = 1536), or 14,240 B effective at the negotiated 1424 B send size. It instead falls *past* both to the 2,848 B floor via loss. (An earlier draft said "cwnd flat at 241,174 B"; that was the 50 Mbit run and it was not flat - see the corrections record.)
 
 Consequence: **S0 must be implemented by us, not observed.** Our first code contribution is making picoquic RFC-compliant. Conversely the **NAIVE carry-over arm is free** — it is picoquic's default behaviour.
 

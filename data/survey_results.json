@@ -39,8 +39,11 @@
       "cc_selectable": true,
       "cc_selectable_note": "-G flag; 7 algorithms",
       "initial_cwnd_bytes": 15360,
-      "initial_cwnd_formula": "10 x 1536",
-      "min_cwnd_bytes": null,
+      "initial_cwnd_formula": "10 x 1536 (PICOQUIC_CWIN_INITIAL = 10 x PICOQUIC_MAX_PACKET_SIZE)",
+      "initial_cwnd_effective_bytes": 14240,
+      "initial_cwnd_effective_note": "picoquic sizes its windows from the NEGOTIATED path MTU, not from the 1536 constant. The send size on this testbed is 1424 B, so the window a reset would actually assign is 10 x 1424 = 14,240 B. Both values are treated as reset-shaped when discriminating.",
+      "min_cwnd_bytes": 2848,
+      "min_cwnd_formula": "PICOQUIC_CWIN_MINIMUM = 2 x MTU = 2 x 1424 (2 x 1536 = 3,072 B by the constant)",
       "loss_factor": null,
       "reset_hook": {
         "name": "picoquic_congestion_notification_reset",
@@ -53,7 +56,7 @@
         "answer": "NO",
         "verified": "source+live",
         "mechanism": "congestion state belongs to the path object, which is reused; a new address tuple is attached to it",
-        "evidence": "reset notification has 7 handlers and 0 callers; live, the window never came near the 15,360 B initial window across an IP-changing migration -- it declined 241,174 -> 146,592 -> 123,888 B through ordinary loss, a minimum still 8.1x the initial window"
+        "evidence": "reset notification has 7 handlers and 0 callers; live, across 5/5 IP-changing migrations ZERO samples took the initial window (15,360 B by the constant, 14,240 B effective at the negotiated 1424 B send size). The window instead fell BELOW both to a minimum of 2,848-8,608 B -- the loss floor, reached ~110 ms after migration with 42-58 packets lost -- which is a loss cascade, not a reset."
       },
       "q2": {
         "answer": "INERT",
@@ -65,19 +68,31 @@
         "answer": "NO",
         "verified": "source+live",
         "mechanism": "no old/new path attribution for ACK-derived samples",
-        "evidence": "our compliant reset re-seeded srtt to 20.3 ms on a 60 ms path 1.8 ms after clearing it"
+        "evidence": "Two independent observations. (a) In the STEP-DOWN experiment (run_topup_and_stepdown.sh, path B 20 Mbit/60 ms) our own compliant reset was re-seeded to 20.3 ms -- the OLD path's RTT -- just 1.8 ms after being cleared. (b) In the five stock repetitions at 20/40 ms, srtt still read 24.7-30.2 ms on the first sample after migrating to a 40 ms path, converging to ~40.3 ms only after about a second. Note the 60 ms figure belongs to (a) alone; the standard operating point uses a 40 ms new path."
       },
       "live": {
-        "reps": 1,
-        "cwnd_before_bytes": 241174,
-        "cwnd_before_definition": "the LAST sample before the path-challenge window. The maximum over the whole pre-migration trace is higher, 304,566 B; both are correct but they measure different things, so state which one is meant wherever this number appears.",
-        "cwnd_after_bytes": 123888,
-        "cwnd_min_after_x_initial": 8.1,
+        "reps": 5,
+        "operating_point": "20 Mbit both paths; path A 20 ms and path B 40 ms one-way netem on the down direction, so true RTTs are ~20 ms and ~40 ms; tbf burst 3200 B; 50 MB transfer; migration at 5 s. This is the Phase-2 standard operating point, identical to the other four implementations.",
+        "migration_verified": "IP change 10.0.1.1 -> 10.0.3.1 with the port UNCHANGED, in 5/5 repetitions, confirmed from the server qlog addr_from/addr_to fields rather than from client stdout. An IP change is NOT covered by the RFC 9000 s9.4 port-only exemption, so the requirement is fully engaged.",
+        "cwnd_before_bytes": 89352,
+        "cwnd_before_range_bytes": [86904, 89352],
+        "cwnd_before_definition": "the LAST sample before the path-challenge window",
+        "cwnd_after_bytes": 8608,
+        "cwnd_after_range_bytes": [2848, 8608],
+        "cwnd_after_definition": "the MINIMUM within the migration window and the second following it",
         "reset_observed": false,
-        "first_post_migration_rtt_ms": 20.3,
-        "new_path_true_rtt_ms": 60.0,
-        "rtt_reflects": "old path",
-        "_correction_2026_08_11": "An earlier write-up described this as 'cwnd flat at 241,174 B across the migration'. That is WRONG and must not be repeated. Re-derived from the trace: the window declined 241,174 -> 146,592 -> 123,888 through ordinary loss events over the migration window. The CLAIM is unaffected -- it never approached the 15,360 B initial window, its minimum being 8.1x that -- but it was not flat, and saying so overstates the evidence."
+        "reset_observed_reps": "0/5",
+        "discriminator": "A reset assigns the initial window EXACTLY -- 15,360 B by picoquic's constant, or 14,240 B from the negotiated 1424 B send size. ZERO samples took either value in any of the five repetitions. The window instead fell BELOW both, reaching exactly 2,848 B (= 2 x 1424 = PICOQUIC_CWIN_MINIMUM) in 2 of 5 reps, about 110 ms after the migration window and alongside 42-58 lost packets. A window below the initial value cannot have been produced BY a reset; that is a loss cascade bottoming out at the floor.",
+        "packets_lost_near_migration": "42-58 per repetition",
+        "first_post_migration_rtt_ms": 25.96,
+        "first_post_migration_rtt_range_ms": [24.73, 30.23],
+        "new_path_true_rtt_ms": 40.0,
+        "rtt_reflects": "the old path immediately after migration, converging to the new path over roughly one second",
+        "rtt_detail": "srtt 23.4-27.0 ms before migration on the 20 ms path A; 24.7-30.2 ms on the first sample after the migration window, still near path A rather than path B's 40 ms; 40.22-40.44 ms one second later; 40.2-41.0 ms at end of transfer. A compliant implementation would have cleared the estimator to its 250 ms initial RTT and re-measured the new path.",
+        "_correction_2026_08_11": "An earlier write-up described the superseded run as 'cwnd flat at 241,174 B across the migration'. That is WRONG and must not be repeated. Re-derived from the trace: the window declined 241,174 -> 146,592 -> 123,888 B through ordinary loss events. The CLAIM was unaffected -- it never approached the initial window -- but it was not flat, and saying so overstated the evidence.",
+        "_supersedes_2026_08_12": "These five repetitions replace the single Phase-1 repetition, restoring parity with the other four. The superseded run used 50 Mbit rather than the Phase-2 standard 20 Mbit and so was not directly comparable. It is retained at results/raw/_task2_verify/naive/; its figures were cwnd 241,174 -> 123,888 B, reset_observed false -- the same conclusion.",
+        "_correction_2026_08_12_rtt": "The superseded entry recorded new_path_true_rtt_ms = 60.0 with first_post_migration_rtt_ms = 20.3. The 60 ms figure was WRONG for that experiment: it belongs to the step-down scenario (testbed/scenarios/run_topup_and_stepdown.sh, path B 20 Mbit/60 ms), which is where the Q3 contamination evidence came from, and it had been copied into the live block by mistake. The task2_verify shaping logs record delay=20ms on path A and delay=40ms on path B, and that arm's own qlog settles at 41.9 ms after migration.",
+        "_correction_2026_08_12_parser": "The verdict line in analysis/parse_qlog.py tested `min_cwnd <= INITIAL * 1.05`, i.e. 'at or BELOW the initial window', and printed RESET OCCURRED. That is wrong and it fired on all five of these repetitions: a window BELOW the initial value cannot have been set by a reset, since a reset assigns the initial value exactly. The test now requires an exact hit and names the loss-cascade case separately. The defect was latent at 50 Mbit, where the cascade never reached the floor."
       },
       "notes": "Scope: single-path (non-multipath) operation only. With multipath enabled, picoquic_create_path() does produce fresh state."
     },

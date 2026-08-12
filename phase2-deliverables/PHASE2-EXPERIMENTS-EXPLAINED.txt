@@ -102,8 +102,11 @@
      quiche    initial 10 x 1200 = 12,000 B   floor 2,400 B   loss x0.7
      msquic    initial 10 x 1220 = 12,200 B   floor 2,440 B   loss x0.7
      ngtcp2    initial 10 x 1200 = 12,000 B   floor 2,400 B   loss x0.7
-     picoquic  initial 10 x 1536 = 15,360 B   (not needed - it never dropped
-                                               below 8.1x this value)
+     picoquic  initial 10 x 1536 = 15,360 B   floor 2,848 B   loss n/a
+               (effective initial 14,240 B = 10 x the negotiated 1424 B send
+                size; the floor is 2 x 1424. picoquic sizes its windows from
+                the path MTU, not from the 1536 constant, so BOTH values are
+                treated as reset-shaped when discriminating.)
 
  In quic-go this mattered enormously. We observed the sequence
  279,456 -> 195,619 -> 40,960 bytes. The middle value is EXACTLY 279,456 x 0.7,
@@ -153,10 +156,22 @@
       and resets the maximum packet size. It never touches congestion control.
    3. The congestion window is only re-initialised in algorithm setup and in
       new-path creation, neither of which runs during ordinary migration.
-   4. Live: the window never came anywhere near a reset. Across an
-      IP-changing migration it declined 241,174 -> 146,592 -> 123,888 bytes
-      through ordinary loss events - a minimum still 8.1 times its
-      15,360-byte initial window, which is what a reset would have produced.
+   4. Live, across FIVE repetitions at the standard operating point: the
+      window never once took the value a reset would assign. A reset sets the
+      initial window exactly - 15,360 bytes by picoquic's constant, or 14,240
+      by the negotiated 1424-byte send size. Zero samples took either, in any
+      repetition, anywhere from 50 ms before path validation to two seconds
+      after. Every repetition was confirmed to be a genuine IP change
+      (10.0.1.1 -> 10.0.3.1, port unchanged) from the qlog's own address
+      fields, not from what the client printed.
+
+      What the window did instead is the interesting part, and it is the
+      hardest case the discriminator has to handle. It fell PAST the initial
+      window, down to exactly 2,848 bytes - which is 2 x 1424, picoquic's
+      minimum - in two of five runs, about 110 ms after the migration, with
+      42 to 58 packets lost. A window BELOW the initial value cannot have been
+      put there by a reset, because a reset assigns that value exactly.
+      Falling below it is what a loss cascade looks like.
 
    We later re-ran this entire audit against pristine upstream source pulled
    directly from git history, so our own later modifications could not
@@ -168,13 +183,24 @@
    is created and does get fresh state.
 
  Q3 - AND WHY IT MATTERS
-   picoquic does not separate old-path from new-path acknowledgements. This is
-   what broke our own compliant implementation in Phase 1: after clearing the
-   estimator, the very next stale reply from the old network re-seeded it at
-   20.3 ms on a path whose true delay was 60 ms.
+   picoquic does not separate old-path from new-path acknowledgements.
 
- EVIDENCE  _build/revalidate_pristine.sh (re-runnable audit)
-           results/raw/_task2_verify/ (both arms, qlog from both ends)
+   Visible in the five repetitions: before migrating, the estimator reads
+   23.4-27.0 ms on the 20 ms path A. On the first sample after path validation
+   it still reads 24.7-30.2 ms - the OLD path - rather than the new path's
+   40 ms, and only reaches 40.2-40.4 ms about a second later. A compliant
+   implementation would have cleared the estimator to picoquic's 250 ms
+   initial RTT and measured the new path from scratch.
+
+   It showed up more sharply in Phase 1's STEP-DOWN scenario, where path B was
+   20 Mbit/60 ms: there our own compliant reset was re-seeded to 20.3 ms - the
+   old path's RTT - just 1.8 ms after being cleared. Note the 60 ms belongs to
+   that scenario only; the standard operating point uses a 40 ms new path.
+
+ EVIDENCE  _build/revalidate_pristine.sh (re-runnable source audit)
+           testbed/scenarios/picoquic_repeat5.sh (the five live repetitions)
+           results/raw/picoquic/reps/rep_1 .. rep_5/ (five repetitions)
+           results/raw/_task2_verify/ (the superseded Phase-1 run, retained)
 
 
  -----------------------------------------------------------------------------
@@ -534,7 +560,7 @@
  validator from scratch - sharing no code with the analysis pipeline - which
  re-derives each claim from primary sources: source pulled straight out of git
  object storage, and raw traces re-parsed with its own parsers for all three
- qlog formats. It runs 27 checks. All 27 pass.
+ qlog formats. It runs 30 checks. All 30 pass.
 
  It earned its keep. Four claims did not survive, and all four had already been
  written down before we caught them.
@@ -564,6 +590,26 @@
     gate should open. Why it apparently does not is unknown. The observation
     stands on its own and is now reported as an observation with no cause
     attached.
+
+ 5. "picoquic's new path had a true round-trip delay of 60 ms."
+    WRONG for that experiment. 60 ms belongs to the STEP-DOWN scenario, where
+    path B is 20 Mbit/60 ms, and it had been copied into the live record by
+    mistake. The run in question was shaped at 20 ms and 40 ms - confirmed by
+    its own shaping logs and by its qlog settling at 41.9 ms after migration.
+    Corrected to 40 ms.
+
+ 6. The parser's own verdict line: "cwnd reached the initial window -> RESET
+    OCCURRED."
+    WRONG, and the most uncomfortable of the six because it is our own tool.
+    The test was "minimum cwnd <= initial window x 1.05" - that is, AT OR
+    BELOW. But a window BELOW the initial value cannot have been set by a
+    reset, because a reset assigns that value exactly; falling below it is the
+    signature of a loss cascade. The fault was latent for as long as picoquic
+    was measured at 50 Mbit, where the cascade never reached the floor. At the
+    standard 20 Mbit it fired on all five repetitions and would have reversed
+    the headline finding. The test now requires an exact hit and names the
+    loss case separately. An early version of the independent validator made
+    the same assumption and was corrected with it.
 
  All four corrections are recorded IN the data itself, in survey_results.json,
  under keys named _correction_2026_08_11 - with the reason, so that nobody

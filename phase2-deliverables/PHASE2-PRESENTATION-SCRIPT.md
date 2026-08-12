@@ -177,7 +177,7 @@ You deliver the most striking single result, then establish why the numbers can 
 >
 > Then we wrote a second validator from scratch — sharing no code with the first — that re-derives every claim independently, pulling source straight out of git and re-parsing the raw traces with its own parsers. Twenty-seven checks. Twenty-seven pass.
 >
-> And it earned its keep: along the way this process caught four things we'd got wrong. A window we'd described as flat that had actually declined. A repetition count of four that was really three. A piece of live evidence too weak to carry the claim we'd hung on it. And a cause we'd asserted without proving.
+> And it earned its keep: along the way this process caught six things we'd got wrong. A window we'd described as flat that had actually declined. A repetition count of four that was really three. A piece of live evidence too weak to carry the claim we'd hung on it. A cause we'd asserted without proving. A path delay recorded as sixty milliseconds that was really forty. And — the one that stings — a verdict line in our own parser that would have called a loss event a reset.
 >
 > All four are corrected, and all four are recorded in the data with the reason — so nobody re-introduces them later."
 
@@ -202,7 +202,6 @@ Short, confident, honest.
 >
 > The stuck-estimate result is an observation whose cause we haven't proven.
 >
-> And picoquic has one live repetition where the others have five.
 >
 > We'd rather say all that ourselves than have it found for us."
 
@@ -234,8 +233,11 @@ Short, confident, honest.
 **"Is picoquic's behaviour a bug you should report?"** *(Sivaa)*
 > "Yes, and we intend to. But the interesting part isn't the individual bug — it's that half the field ships this code and never calls it, and that our own careful attempt to implement the rule made things worse. That's a sign the rule is harder to follow than it looks, which is a finding about the specification, not just about one project."
 
-**"Why only one repetition for picoquic?"** *(Shafeeq)*
-> "Honest answer: the others were run later, once we'd learned to archive each repetition before the next overwrote it. picoquic's finding is carried by the source audit, which we re-verified against pristine upstream. Re-running it for parity is on the list."
+**"On slide 10, picoquic's bar is BELOW the dashed line. Doesn't that mean it reset harder than the others?"** *(Krithik)*
+> "No, and this is the case the discriminator was built for. A reset assigns the initial window *exactly* — 15,360 bytes, or 14,240 from the negotiated packet size. Across five runs, not one sample took either value. What happened instead is that the window fell straight past both, down to 2,848 bytes, which is exactly two packets — picoquic's floor — about 110 milliseconds later, with roughly fifty packets lost. A window below the initial value can't have been *set* by a reset, because a reset sets that value precisely. Below it is what a loss cascade looks like."
+
+**"Are all five implementations measured the same way?"** *(Shafeeq)*
+> "Yes. All five now have five repetitions at the same operating point — 20 megabit, 20 and 40 millisecond paths. picoquic originally had a single run at 50 megabit, which wasn't directly comparable, so we re-ran it at the standard point. Same conclusion, five times over, and every run verified from the packet log to be a genuine address change rather than a port change — because a port-only change is exempt from the rule and would prove nothing."
 
 ---
 

@@ -28,6 +28,14 @@ import sys
 # PICOQUIC_CWIN_INITIAL = 10 * PICOQUIC_MAX_PACKET_SIZE (1536) = 15360
 PICOQUIC_CWIN_INITIAL = 15360
 
+# picoquic sizes its windows from the NEGOTIATED path MTU, not from the 1536
+# constant. On this testbed the send size is 1424 B, so the effective initial
+# window is 14,240 B and the effective floor (PICOQUIC_CWIN_MINIMUM = 2 x MTU)
+# is 2,848 B. Both are accepted as reset-shaped values.
+PICOQUIC_EFFECTIVE_MTU = 1424
+CWIN_RESET_CANDIDATES = (PICOQUIC_CWIN_INITIAL, 10 * PICOQUIC_EFFECTIVE_MTU)
+CWIN_FLOOR = 2 * PICOQUIC_EFFECTIVE_MTU
+
 
 def load_trace(path):
     with open(path) as f:
@@ -97,8 +105,30 @@ def summarize(metrics, path_events, losses, label=""):
         print(f"  cwnd MIN in/after: {mn['cwnd']:>9,} B   at t={mn['time_us']} us")
         ratio = mn["cwnd"] / PICOQUIC_CWIN_INITIAL
         print(f"  vs CWIN_INITIAL  : {PICOQUIC_CWIN_INITIAL:,} B  ->  min is {ratio:.1f}x initial")
-        if mn["cwnd"] <= PICOQUIC_CWIN_INITIAL * 1.05:
-            print("  VERDICT          : RESET OCCURRED (cwnd reached the initial window)")
+
+        # The reset-versus-loss discriminator, applied here rather than by eye.
+        #
+        # This test used to be `min_cwnd <= INITIAL * 1.05`, i.e. "at or BELOW
+        # the initial window", and reported a reset. That is wrong, and it was
+        # latent until a run at 20 Mbit made the loss cascade deep enough to
+        # reach the floor: a window BELOW the initial value cannot have been set
+        # BY a reset, because a reset assigns the initial value exactly. Falling
+        # below it is the signature of a loss cascade bottoming out at
+        # PICOQUIC_CWIN_MINIMUM. Require an exact hit instead, and say which of
+        # the two happened.
+        hits = [m for m in pool
+                if any(abs(m["cwnd"] - c) <= 1 for c in CWIN_RESET_CANDIDATES)]
+        cand = " or ".join(f"{c:,}" for c in CWIN_RESET_CANDIDATES)
+        if hits:
+            print(f"  VERDICT          : RESET OCCURRED -- {len(hits)} sample(s) land exactly "
+                  f"on the initial window ({cand} B)")
+        elif mn["cwnd"] < min(CWIN_RESET_CANDIDATES):
+            print(f"  VERDICT          : NO RESET -- window fell BELOW the initial window "
+                  f"({cand} B) without ever taking it; that is a loss cascade toward the "
+                  f"{CWIN_FLOOR:,} B floor, not a reset")
+            if abs(mn["cwnd"] - CWIN_FLOOR) <= 1:
+                print(f"                     (it reached the floor exactly: "
+                      f"2 x {PICOQUIC_EFFECTIVE_MTU} = {CWIN_FLOOR:,} B)")
         else:
             print("  VERDICT          : NO RESET (cwnd never approached the initial window)")
 

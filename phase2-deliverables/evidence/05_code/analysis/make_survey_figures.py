@@ -354,7 +354,13 @@ def fig_cwnd_evidence():
     ax.legend(handles=[
         Patch(facecolor=BLUE, label="just before the switch"),
         Patch(facecolor=GREEN, label="just after — reset to the initial window"),
-        Patch(facecolor=RED, label="just after — unchanged (no reset)"),
+        # "unchanged" was accurate when picoquic was measured at 50 Mbit and its
+        # window merely declined. At the standard 20 Mbit operating point the
+        # loss cascade carries it BELOW the initial window without ever taking
+        # that value -- so the bar can sit under the dashed line while still
+        # being a no-reset. Say so, or the figure reads as a deeper reset.
+        Patch(facecolor=RED,
+              label="just after — NO reset (loss-driven; never took the initial window)"),
     ], frameon=False, fontsize=10.5, loc="upper center", ncol=3,
         bbox_to_anchor=(0.5, -0.17))   # tick labels are two lines now (name + n=)
     # Headroom for the note: without it the tallest bar's value label (msquic at

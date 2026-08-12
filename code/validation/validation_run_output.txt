@@ -8,10 +8,16 @@ fresh code, primary sources, no reuse of project parsers
                 actual 0dc8ba8b2be3
   [92mPASS         [0m reset hook has 0 dispatches in pristine source
                 found 0
-  [92mPASS         [0m live: cwnd never approaches the initial window
-                min near/after migration 123,888 B = 8.1x initial (15,360)
-  [92mPASS         [0m corrected claim: NOT flat (declined via loss)
-                pre-max 304,566 -> 123,888
+  [92mPASS         [0m live reps with retained data == 5
+                found 5
+  [92mPASS         [0m every rep migrated to a DIFFERENT IP (not port-only)
+                5/5 with 2 client IPs
+  [92mPASS         [0m no sample takes the initial window at migration (=> no reset)
+                5/5 reps with 0 samples at 15,360 or 14,240 B in [-50 ms, +2 s] around path validation
+  [92mPASS         [0m window fell BELOW the initial window (loss, not reset)
+                5/5; minima 2,848-8,608 B
+  [92mPASS         [0m superseded 50 Mbit run retained for traceability
+                results/raw/_task2_verify/naive/
 
 ### quic-go
   [92mPASS         [0m commit == 2cfe6ee0b5ac
@@ -70,5 +76,5 @@ fresh code, primary sources, no reuse of project parsers
                 5 distinct mechanisms across 5
 
 ==========================================================================
-SUMMARY: 27 PASS, 0 FAIL, 0 UNVERIFIABLE (of 27 checks)
+SUMMARY: 30 PASS, 0 FAIL, 0 UNVERIFIABLE (of 30 checks)
 ==========================================================================

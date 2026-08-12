@@ -198,24 +198,83 @@ def main():
     record("picoquic", "reset hook has 0 dispatches in pristine source",
            dispatches == 0, f"found {dispatches}")
 
-    # live: cwnd never reaches the initial window
-    q = newest(f"{ROOT}/results/raw/_task2_verify/naive/qlog_server/*.qlog")
-    if q:
-        cw, resp = parse_picoquic_qlog(q)
-        if cw and resp:
-            t0 = min(resp)
-            post = [c for t, c in cw if t0 <= t <= t0 + 2_000_000]
-            pre = [c for t, c in cw if t < t0]
-            mn = min(post) if post else (min(pre[-5:]) if pre else None)
-            iw = im["initial_cwnd_bytes"]
-            record("picoquic", "live: cwnd never approaches the initial window",
-                   mn is not None and mn > iw * 1.05,
-                   f"min near/after migration {mn:,.0f} B = {mn/iw:.1f}x initial ({iw:,})")
-            record("picoquic", "corrected claim: NOT flat (declined via loss)",
-                   pre and mn is not None and mn < max(pre),
-                   f"pre-max {max(pre):,.0f} -> {mn:,.0f}")
-    else:
-        record("picoquic", "live trace present", None, "no naive server qlog found")
+    # live: five repetitions at the Phase-2 operating point.
+    #
+    # The test for "no reset" is NOT "the window stayed above the initial value".
+    # A loss cascade can legitimately take it below, and on this data it does --
+    # down to the 2 x MTU floor. Both the parser and an earlier version of THIS
+    # validator got that backwards. A reset assigns the initial window EXACTLY,
+    # so the correct test is that no sample ever takes it.
+    iw_const = im["initial_cwnd_bytes"]
+    iw_eff = im.get("initial_cwnd_effective_bytes") or iw_const
+    reps = sorted(glob.glob(f"{ROOT}/results/raw/picoquic/reps/rep_*"))
+    seen = clean = ip_changed = below = 0
+    minima = []
+    for d in reps:
+        qs = sorted(glob.glob(f"{d}/qlog_server/*.qlog"),
+                    key=os.path.getsize, reverse=True)
+        if not qs:
+            continue
+        seen += 1
+        with open(qs[0]) as fh:
+            tr = json.load(fh)["traces"][0]
+        fl = tr["event_fields"]
+        ti, ni, di = fl.index("relative_time"), fl.index("event"), fl.index("data")
+        cw, ips, resp = [], set(), []
+        for ev in tr["events"]:
+            data = ev[di]
+            if not isinstance(data, dict):
+                continue
+            if ev[ni] == "metrics_updated" and "cwnd" in data:
+                cw.append((float(ev[ti]), float(data["cwnd"])))
+            elif ev[ni] == "packet_received":
+                for fr in data.get("frames") or []:
+                    if fr.get("frame_type") == "path_response":
+                        resp.append(float(ev[ti]))
+            for key in ("addr_from", "addr_to"):
+                a = data.get(key)
+                if isinstance(a, dict):
+                    ip = a.get("ip_v4") or a.get("ip")
+                    if isinstance(ip, str) and ip.startswith("10.0."):
+                        ips.add(ip)
+        if not cw or not resp:
+            continue
+        # Scope to the migration. Testing the WHOLE trace is wrong: every
+        # connection BEGINS at its initial window, so that value always appears
+        # near t=0 and the test can never pass. A reset would re-take it here.
+        t0 = min(resp)
+        window = [c for t, c in cw if t0 - 50_000 <= t <= t0 + 2_000_000]
+        if not window:
+            continue
+        hits = [c for c in window if abs(c - iw_const) <= 1 or abs(c - iw_eff) <= 1]
+        if not hits:
+            clean += 1
+        mn = min(window)
+        minima.append(mn)
+        if mn < min(iw_const, iw_eff):
+            below += 1
+        # A migration between two DIFFERENT client IPs; a port-only change would
+        # be exempt under RFC 9000 s9.4 and would prove nothing.
+        client_ips = {i for i in ips if i.startswith(("10.0.1.", "10.0.3."))}
+        if len(client_ips) > 1:
+            ip_changed += 1
+
+    exp = im["live"]["reps"]
+    record("picoquic", f"live reps with retained data == {exp}", seen == exp,
+           f"found {seen}")
+    record("picoquic", "every rep migrated to a DIFFERENT IP (not port-only)",
+           seen > 0 and ip_changed == seen, f"{ip_changed}/{seen} with 2 client IPs")
+    record("picoquic", "no sample takes the initial window at migration (=> no reset)",
+           seen > 0 and clean == seen,
+           f"{clean}/{seen} reps with 0 samples at {iw_const:,} or {iw_eff:,} B "
+           f"in [-50 ms, +2 s] around path validation")
+    record("picoquic", "window fell BELOW the initial window (loss, not reset)",
+           seen > 0 and below == seen,
+           f"{below}/{seen}; minima {min(minima):,.0f}-{max(minima):,.0f} B"
+           if minima else "no minima")
+    record("picoquic", "superseded 50 Mbit run retained for traceability",
+           bool(newest(f"{ROOT}/results/raw/_task2_verify/naive/qlog_server/*.qlog")),
+           "results/raw/_task2_verify/naive/")
 
     # ---------------- quic-go ----------------
     print("\n### quic-go")

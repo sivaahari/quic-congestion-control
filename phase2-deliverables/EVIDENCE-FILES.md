@@ -17,7 +17,7 @@ If you can only point at a handful, point at these.
 | File | What it proves |
 |---|---|
 | **`01_survey_data/survey_table.csv`** | The whole survey on one page — every implementation, all three answers, mechanism, commit hash, initial/minimum window, loss factor, and live results. |
-| **`04_validation/validation_run_output.txt`** | **27 checks, 27 pass.** An independent re-derivation of every claim, by code sharing nothing with the analysis pipeline. |
+| **`04_validation/validation_run_output.txt`** | **30 checks, 30 pass.** An independent re-derivation of every claim, by code sharing nothing with the analysis pipeline. |
 | **`01_survey_data/survey_results.json`** | The single source of truth. Every figure and table is generated from it, and it carries the `_correction_*` entries recording what we got wrong and fixed. |
 | **`05_code/commit_hashes.txt`** | The exact commit of all five implementations, so anyone can reconstruct precisely what was tested. |
 | **`03_live_measurements/`** | The raw measurement CSVs behind every "reset observed" claim. |
@@ -47,7 +47,7 @@ Per-repetition congestion-window and RTT time series for every implementation th
 | quiche | 5 | server metrics CSV + parser summary per rep |
 | msquic | 5 | server **and** client metrics CSV per rep, plus `rep_status.txt` |
 | ngtcp2 | 5 | migration-evidence extract per rep |
-| picoquic | 1 | sample trace in `06_sample_traces/` |
+| picoquic | 5 | server metrics CSV + parser summary per rep |
 
 The ngtcp2 entries are extracts rather than full logs: its example client emits ~445 MB per run. The full logs are retained in the project tree.
 
@@ -55,7 +55,7 @@ The ngtcp2 entries are extracts rather than full logs: its example client emits 
 
 - **`revalidate_fresh.py`** — a validator written from scratch that shares no code with any parser or figure generator in the project. It reads the claims and re-derives each from primary sources: `git show HEAD:<path>` for code, raw traces for measurements, with its own parsers for all three qlog formats.
 - **`recheck_f6.py`** — resolves the one check that initially failed, which turned out to be a bug in the new validator rather than a wrong claim.
-- **`validation_run_output.txt`** — the run: **27 PASS, 0 FAIL, 0 UNVERIFIABLE.**
+- **`validation_run_output.txt`** — the run: **30 PASS, 0 FAIL, 0 UNVERIFIABLE.**
 
 ### `05_code/` — the apparatus
 
@@ -86,4 +86,4 @@ Three answers, in increasing strength:
 
 1. **Every claim was answered twice** — once from source, once from measurement — and they had to agree.
 2. **The reset-vs-loss discriminator.** A drop to the initial window only proves a reset if an ordinary loss event could not produce the same number. We looked up each implementation's initial window, loss floor and reduction factor and confirmed it. In quic-go that revealed a loss event and a reset 0.4 ms apart, where we would otherwise have reported one.
-3. **An independent validator**, written from scratch, re-derives all 27 checks from primary sources and passes all of them. It also caught four things we had got wrong along the way — all corrected, all recorded with their reasons in `survey_results.json`.
+3. **An independent validator**, written from scratch, re-derives all 30 checks from primary sources and passes all of them. It also caught four things we had got wrong along the way — all corrected, all recorded with their reasons in `survey_results.json`.

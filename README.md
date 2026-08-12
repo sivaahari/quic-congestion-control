@@ -39,7 +39,7 @@ exclusion took transfer completion from 5/5 to 0/15 in our own patched build.
 
 Every claim in this repository is re-derivable from primary sources by an
 independent validator that shares no code with the analysis pipeline. It runs 27
-checks; all 27 pass.
+checks; all 30 pass.
 
 ---
 
@@ -70,7 +70,7 @@ what it costs when they do not. That is the gap this work addresses.
 | Languages | C, Go, Rust |
 | Source audits complete | 5 of 5 |
 | Live measurement complete | 5 of 5 |
-| Independent validation | 27 checks, 27 pass |
+| Independent validation | 30 checks, 30 pass |
 | Environment | Emulation only (Linux network namespaces under WSL2) |
 
 This is an emulation study. There are no real handsets and no real cellular
@@ -142,7 +142,7 @@ complete lifecycle of the congestion estimate across a migration event.
 
 | Implementation | Language | Vendor | Commit | Q1 (MUST) | Q2 (MAY) | Q3 (MUST) | Live reps |
 |---|---|---|---|---|---|---|---|
-| picoquic | C | private-octopus | `0dc8ba8b` | **NO** | present but inert | **NO** | 1 |
+| picoquic | C | private-octopus | `0dc8ba8b` | **NO** | present but inert | **NO** | 5 |
 | quic-go | Go | quic-go | `2cfe6ee0` | YES | NO | YES | 5 |
 | quiche | Rust | Cloudflare | `e97798e1` | YES | NO | YES | 5 |
 | msquic | C | Microsoft | `4db8b398` | **ASYMMETRIC** | NO | **SPLIT** | 5 |
@@ -160,7 +160,7 @@ sufficient to reconstruct exactly what was audited.
 
 | Implementation | Window before | Window after | Own initial window | Reset observed | Reps |
 |---|---|---|---|---|---|
-| picoquic | 241,174 B | 123,888 B (minimum) | 15,360 B | **No** | 1 |
+| picoquic | 86,904–89,352 B | 2,848–8,608 B (minimum) | 15,360 B / 14,240 B effective | **No** | 5 |
 | quic-go | 274,025–280,414 B | **40,960 B** | 40,960 B | Yes, 5/5 | 5 |
 | quiche | 654,900 B | **12,000 B** | 12,000 B | Yes, 5/5 | 5 |
 | msquic (server) | 1,481,740–1,484,569 B | **12,200 B** | 12,200 B | Yes, 5/5 | 5 |
@@ -172,12 +172,17 @@ establishes that no ordinary loss event could produce the same number.
 
 Two clarifications that matter for honest reading of this table:
 
-- **picoquic's "window before" is the last sample before the path-challenge
-  window.** The maximum over the whole pre-migration trace is higher, 304,566 B.
-  Both are correct; they measure different things. The window did not stay flat:
-  it declined 241,174 → 146,592 → 123,888 B through ordinary loss events across
-  the migration. It never approached a reset — its minimum is 8.1× its own
-  initial window.
+- **picoquic's row is the one case where the window ends up BELOW its own
+  initial value, and that is still not a reset.** This is the discriminator's
+  hardest case and it is worth stating precisely. A reset assigns the initial
+  window *exactly* — 15,360 B by picoquic's constant, or 14,240 B from the
+  negotiated 1424 B send size. Across five repetitions, **zero samples took
+  either value** in the interval from 50 ms before path validation to two
+  seconds after. What the window did instead was fall *past* both, reaching
+  exactly 2,848 B (= 2 × 1424 = `PICOQUIC_CWIN_MINIMUM`, the floor) in two of
+  five runs, roughly 110 ms after the migration and alongside 42–58 lost
+  packets. A window below the initial value cannot have been produced *by* a
+  reset. It is a loss cascade bottoming out.
 - **msquic's client-side window is not decisive evidence.** It sat flat at
   96,290 B, but in a download the client is acknowledgement-only (it sent
   389,341 B in total, of which 16 were stream bytes), so its congestion window
@@ -191,15 +196,24 @@ which network an implementation is measuring after the switch.
 
 | Implementation | First post-migration RTT | True RTT of new path | What it reflects |
 |---|---|---|---|
-| picoquic | 20.3 ms | 60 ms | **The old path** |
+| picoquic | 24.7–30.2 ms | 40 ms | **The old path**, converging over ~1 s |
 | quic-go | 40.4–40.8 ms | 40 ms | The new path |
 | quiche | path A 20.27–20.53 ms; path B 40.21–40.24 ms | 20 / 40 ms | Both, tracked separately |
 | msquic (server) | 333.0 ms, unchanged for ~20 s | 40 ms | **Neither — stuck at its default** |
 | ngtcp2 | new-path value | 40 ms | The new path |
 
-picoquic's 20.3 ms on a 60 ms path is the Q3 failure made visible: a stale
-acknowledgement from the old path re-seeded the estimator 1.8 ms after it was
-cleared.
+picoquic's row is the Q3 failure made visible. Before migrating it reads
+23.4–27.0 ms on the 20 ms path A. On the first sample after path validation it
+still reads 24.7–30.2 ms — the old path — rather than the new path's 40 ms, and
+only reaches 40.22–40.44 ms about a second later. A compliant implementation
+would have cleared the estimator to picoquic's 250 ms initial RTT and re-measured
+the new path from scratch.
+
+The same failure was demonstrated more sharply in Phase 1's step-down scenario
+(path B at 20 Mbit/60 ms), where our own *compliant* reset was re-seeded to
+20.3 ms — the old path's RTT — just 1.8 ms after being cleared. That 60 ms figure
+belongs to that experiment alone; the standard operating point used here has a
+40 ms new path.
 
 ### 4.4 Per-implementation detail
 
@@ -222,6 +236,13 @@ This was re-derived a second time against pristine upstream source pulled
 directly out of git object storage, so that our own later modifications to the
 tree could not contaminate the finding. Upstream dispatches ten distinct
 congestion notifications; the reset is not among them.
+
+*Q1, live.* Five repetitions, each verified from the server qlog's
+`addr_from`/`addr_to` fields to be a genuine IP change (`10.0.1.1` →
+`10.0.3.1`, port unchanged) rather than a port-only rebinding — the latter would
+be exempt under §9.4 and would prove nothing. In none of the five did the window
+ever take the initial value. See §4.2 for why falling *below* the initial window
+is not a reset.
 
 *Scope.* This holds for single-path operation, which is the default and what
 standard migration uses. With multipath enabled, `picoquic_create_path()` does
@@ -480,7 +501,7 @@ single loss event applies — and the observed value confirmed to be explicable
 
 | Implementation | Initial window | Loss floor | Loss factor |
 |---|---|---|---|
-| picoquic | 10 × 1536 = 15,360 B | not required (minimum observed was 8.1× the initial window) | — |
+| picoquic | 10 × 1536 = 15,360 B by the constant; **14,240 B effective** (10 × the negotiated 1424 B send size) | 2 × 1424 = **2,848 B** | — |
 | quic-go | 32 × 1280 = 40,960 B | 2,560 B | ×0.7 |
 | quiche | 10 × 1200 = 12,000 B | 2,400 B | ×0.7 |
 | msquic | 10 × 1220 = 12,200 B | 2,440 B | ×0.7 |
@@ -514,8 +535,9 @@ The two different delays are load-bearing: they make the RTT alone sufficient to
 identify which network an implementation is measuring after the switch, which is
 what makes Q3 answerable from a trace at all.
 
-Phase 1 used a different pair, with the new path at 60 ms; picoquic's numbers in
-§4.3 are against that configuration.
+All five implementations, picoquic included, are measured at this operating
+point. Phase 1 additionally used a step-down pair with the new path at 20 Mbit /
+60 ms, which is where the sharper Q3 demonstration in §4.3 comes from.
 
 ### 6.4 Testbed calibration
 
@@ -565,11 +587,15 @@ generator in the project. It re-derives every claim from primary sources: source
 code read via `git show HEAD:<path>` rather than from the working tree, and raw
 traces re-parsed with its own independent parsers for all three qlog formats.
 
-It runs **27 checks and passes all 27**
+It runs **30 checks and passes all 30**
 ([`code/validation/validation_run_output.txt`](code/validation/validation_run_output.txt)).
 
-It also earned its keep: it caught four claims that did not survive scrutiny. All
-four are recorded in [§11](#11-record-of-corrections).
+It also earned its keep, twice over. It caught the claims recorded in
+[§11](#11-record-of-corrections) — and when picoquic's repetitions were added it
+rejected the first version of its own new check, which tested the whole trace for
+the initial window. That test can never pass: every connection *begins* at its
+initial window, so the value always appears near t=0. Scoping it to the migration
+is what makes it evidence.
 
 ---
 
@@ -669,7 +695,7 @@ python3 code/analysis/make_survey_figures.py
 python3 code/validation/revalidate_fresh.py
 ```
 
-Expected: `27 PASS, 0 FAIL, 0 UNVERIFIABLE (of 27 checks)`.
+Expected: `30 PASS, 0 FAIL, 0 UNVERIFIABLE (of 30 checks)`.
 
 ### 8.4 Re-run a source audit
 
@@ -754,10 +780,7 @@ Upstream implementations are **not** vendored. They are pinned by commit in
    reading is known it is stated.
 5. **msquic's stuck-RTT result (F6) is an observation, not a diagnosis.** The
    mechanism is unexplained and an instrumented build is required to establish it.
-6. **picoquic has one live repetition where the others have five.** Its findings
-   are carried by the source audit, which was re-verified against pristine
-   upstream. Restoring repetition parity is outstanding.
-7. **These are moving projects.** Each was tested at one commit, recorded in
+6. **These are moving projects.** Each was tested at one commit, recorded in
    `data/upstream_commits.txt`.
 
 ---
@@ -770,7 +793,9 @@ down before they were caught. They are recorded here, and in the data file under
 
 | Claim as originally written | Status | Correction |
 |---|---|---|
-| "picoquic's window stayed flat at 241,174 B" | **Wrong** | It declined 241,174 → 146,592 → 123,888 B through ordinary loss. The conclusion is unaffected — the minimum is still 8.1× the initial window, so no reset occurred — but "flat" overstated the evidence. |
+| "picoquic's window stayed flat at 241,174 B" | **Wrong** | It declined 241,174 → 146,592 → 123,888 B through ordinary loss. The conclusion was unaffected — it never took the initial window, so no reset occurred — but "flat" overstated the evidence. |
+| "picoquic's new path had a true RTT of 60 ms" | **Wrong** | That figure belongs to the step-down experiment (path B at 20 Mbit/60 ms) and had been copied into the live record by mistake. The run in question was shaped at 20 ms / 40 ms — confirmed by its own shaping logs and by its qlog settling at 41.9 ms. Corrected to 40 ms. |
+| Parser verdict: "cwnd reached the initial window → RESET OCCURRED" | **Wrong** | The test was `min_cwnd <= initial × 1.05`, i.e. *at or below* the initial window. A window **below** the initial value cannot have been set by a reset, which assigns that value exactly — falling below it is the signature of a loss cascade. The defect was latent while picoquic ran at 50 Mbit, where the cascade never reached the floor; at 20 Mbit it fired on all five repetitions. The test now requires an exact hit. An early version of the independent validator shared the same flawed assumption and was corrected with it. |
 | "quic-go, four repetitions" | **Wrong** | Three. The trial script hardcoded its output directory and later repeats overwrote earlier ones. Resolved by re-running five fresh repetitions through an archiving wrapper. |
 | "msquic's client window stayed flat, therefore the client does not reset" | **Too weak** | In a download the client is acknowledgement-only, so a flat window is expected either way. The claim is true but rests on the source audit; the live trace only corroborates. |
 | "msquic's RTT stays stuck because its path gate never re-opens" | **Unsupported** | `path.c:29` assigns each new path a fresh identifier, so the gate should open. Withdrawn; the mechanism is unknown and F6 is now reported as an observation only. |

@@ -1,0 +1,11 @@
+wrote 208 rows -> /home/sivaa/pvseed/results/raw/picoquic/reps/rep_1/server_metrics.csv
+
+===== 327c708a5acb21d5.c797.server.qlog =====
+  migration window : t=4984026 .. 5024318 us  (4 path_* frame events)
+  cwnd BEFORE      :    86,904 B   (srtt 23905 us)
+  cwnd MIN in/after:     8,608 B   at t=5110095 us
+  vs CWIN_INITIAL  : 15,360 B  ->  min is 0.6x initial
+  VERDICT          : NO RESET -- window fell BELOW the initial window (15,360 or 14,240 B) without ever taking it; that is a loss cascade toward the 2,848 B floor, not a reset
+  srtt after (max) : 40361 us   (PICOQUIC_INITIAL_RTT = 250000 us)
+  packets lost near migration (+-): 51
+  total packets lost in trace     : 51
