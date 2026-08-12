@@ -2,6 +2,10 @@
 
 **Deck:** `PhaseII_Review.pptx` (13 slides) · **Runtime:** ~13 minutes + questions
 
+> Regenerate the deck with `analysis/make_deck_phase2.py`; every count in it comes
+> from `survey_results.json`. If a number here disagrees with the slide, the slide
+> is right — then fix this script, and run `_qa/audit_claims.py` to prove it.
+
 | Presenter | Slides | Share |
 |---|---|---|
 | **Sivaa** | 1 – 5 | 40% |
@@ -165,7 +169,9 @@ You deliver the most striking single result, then establish why the numbers can 
 >
 > For each implementation, the send-rate setting just before the network switch, and just after. The dashed line is that implementation's own starting value.
 >
-> *[point]* Where the bar drops to exactly the dashed line, that's a reset.
+> *[point]* Where the bar drops to exactly the dashed line, that's a reset. Four of the five do that.
+>
+> *[point at picoquic]* And watch this one, because it looks like the opposite of what it is. picoquic's bar sits *below* its dashed line — and that is **not** a reset. A reset sets the window to exactly the starting value. Falling straight past it means something else took it there: ordinary packet loss, bottoming out at two packets. Across five runs, not one sample ever landed on the starting value.
 >
 > And we were careful here. A collapse to the starting value only *proves* a reset if an ordinary loss event couldn't produce the same number. So for each implementation we looked up its loss arithmetic first and confirmed it couldn't. In quic-go that mattered a great deal — in all five runs there are actually *two* events, not one: an ordinary loss backoff to exactly seven tenths of the peak, and then, one to two milliseconds later, the real reset to exactly forty thousand nine hundred and sixty bytes. Without the arithmetic we'd have reported a single collapse."
 
@@ -175,9 +181,9 @@ You deliver the most striking single result, then establish why the numbers can 
 >
 > Every claim answered twice, from source and from measurement, and they had to agree.
 >
-> Then we wrote a second validator from scratch — sharing no code with the first — that re-derives every claim independently, pulling source straight out of git and re-parsing the raw traces with its own parsers. Twenty-seven checks. Twenty-seven pass.
+> Then we wrote a second validator from scratch — sharing no code with the first — that re-derives every claim independently, pulling source straight out of git and re-parsing the raw traces with its own parsers. Thirty checks. Thirty pass.
 >
-> And it earned its keep: along the way this process caught seven things we'd got wrong. A window we'd described as flat that had actually declined. A repetition count of four that was really three. A piece of live evidence too weak to carry the claim we'd hung on it. A cause we'd asserted without proving. A path delay recorded as sixty milliseconds that was really forty. And — the one that stings — a verdict line in our own parser that would have called a loss event a reset.
+> And it earned its keep: along the way this process caught seven things we'd got wrong. A window we'd described as flat that had actually declined. A repetition count of four that was really three. A piece of live evidence too weak to carry the claim we'd hung on it. A cause we'd asserted without proving. A path delay recorded as sixty milliseconds that was really forty. A set of figures we were quoting from a trace that had been overwritten, so they couldn't be re-derived at all. And — the one that stings — a verdict line in our own parser that would have called a loss event a reset.
 >
 > All seven are corrected, and all seven are recorded in the data with the reason — so nobody re-introduces them later."
 
@@ -202,8 +208,9 @@ Short, confident, honest.
 >
 > The stuck-estimate result is an observation whose cause we haven't proven.
 >
->
 > We'd rather say all that ourselves than have it found for us."
+
+*The picoquic repetition caveat used to be the fifth bullet here. It is gone from the slide because all five implementations now have five repetitions — don't say it.*
 
 ## Slide 13 — Where this goes (~35 s)
 

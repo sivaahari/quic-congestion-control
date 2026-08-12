@@ -313,9 +313,10 @@ s = s_()
 head(s, "What the measurements actually look like.", kicker="THE EVIDENCE")
 pic(s, "p2_fig4_cwnd_evidence.png", 1.1, 1.95, 11.1)
 foot(s, "Each implementation's own initial window is the dashed line. A drop to "
-        "exactly that value can only be a reset — we checked each one's loss "
+        "EXACTLY that value can only be a reset — we checked each one's loss "
         "arithmetic to be sure an ordinary loss event could not produce the same "
-        "number.")
+        "number. A bar BELOW the line is therefore not a deeper reset but the "
+        "opposite: loss carried it past the value a reset would have set.")
 
 # ------------------------------------------------------------------ 11 rigour
 s = s_()
