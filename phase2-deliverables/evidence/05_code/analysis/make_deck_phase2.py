@@ -168,6 +168,13 @@ _short = [n for n, r in _reps.items() if r and r < _max_reps]
 # here and both went stale the moment the picoquic work added two corrections
 # and three checks -- the slide still claimed "four things" and "27 checks".
 n_corr = len(D.get("corrections") or [])
+# The discriminator's decisive case, from the data rather than from memory: the
+# figures previously quoted here (279,456 -> 195,619, "0.4 ms apart") came from a
+# trace that had been overwritten and could not be re-derived -- correction C7.
+_ltr = ((next((i for i in IMPLS if i["name"] == "quic-go"), {}).get("live") or {})
+        .get("loss_then_reset") or {})
+_g = _ltr.get("gap_to_reset_ms_range") or []
+_gap = f"{_g[0]}–{_g[1]}" if len(_g) == 2 else "a few"
 _val = D.get("validation") or {}
 n_checks = _val.get("checks", "?")
 n_pass = _val.get("passed", "?")
@@ -316,11 +323,12 @@ head(s, "How we know we are not fooling ourselves.", kicker="METHOD")
 tf = tb(s, 0.85, 2.15, 11.8, 4.4)
 p_(tf, "Every claim was answered twice — from source and from measurement — and "
        "they had to agree.", size=18, first=True, after=14)
-p_(tf, "Before trusting any drop in the send rate, we looked up each "
-       "implementation's initial window, its loss floor, and its loss reduction "
-       "factor, and confirmed the number we saw could only be a reset. In one "
-       "case that revealed a loss event and a reset happening 0.4 milliseconds "
-       "apart, where we would otherwise have reported one.", size=17, after=14)
+p_(tf, f"Before trusting any drop in the send rate, we looked up each "
+       f"implementation's initial window, its loss floor, and its loss reduction "
+       f"factor, and confirmed the number we saw could only be a reset. In "
+       f"quic-go that revealed TWO events where we would have reported one — in "
+       f"{_ltr.get('observed_reps', '5/5')} runs an ordinary loss backoff to exactly 0.7× the peak, then "
+       f"the real reset {_gap} milliseconds later.", size=17, after=14)
 p_(tf, f"Then we wrote a second validator from scratch, sharing no code with the "
        f"first, which re-derives every claim from git object storage and raw "
        f"traces. {n_checks} checks, {n_pass} pass.", size=17, after=14)

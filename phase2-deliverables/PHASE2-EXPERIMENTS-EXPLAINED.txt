@@ -108,11 +108,19 @@
                 the path MTU, not from the 1536 constant, so BOTH values are
                 treated as reset-shaped when discriminating.)
 
- In quic-go this mattered enormously. We observed the sequence
- 279,456 -> 195,619 -> 40,960 bytes. The middle value is EXACTLY 279,456 x 0.7,
- a Reno loss backoff. So a loss event and a reset both happened, 0.4 ms apart -
- and only the reset can produce 40,960. Without the discriminator we would have
- reported one event where there were two.
+ In quic-go this mattered enormously, and it is the discriminator's clearest
+ case. In EVERY one of the five repetitions the window sample immediately
+ before the reset is EXACTLY 0.7 times the preceding peak - a Reno loss
+ backoff - and the reset to exactly 40,960 bytes follows 0.44 to 1.96 ms later.
+
+     peak before      274,025 - 280,414 B
+     x0.7 backoff     191,817 - 196,289 B   (exactly 0.7 x the peak, 5/5)
+     then reset       40,960 B exactly
+     gap              0.44 - 1.96 ms
+
+ So a loss event and a reset both happen, milliseconds apart, and only the
+ reset can produce 40,960. Without the discriminator we would have reported one
+ event where there were two.
 
 
  THE TESTBED
@@ -312,9 +320,11 @@
    same connection is simultaneously compliant and non-compliant depending on
    which end you ask.
 
-   Live, across five runs: the server's window went from about 1,483,000 bytes
-   to exactly 12,200 - its initial window - every time, while the client's sat
-   flat at 96,290 bytes.
+   Live, across five runs: the server's window went from 1,481,740-1,484,569
+   bytes to exactly 12,200 - its initial window - every time, while the
+   client's sat flat at 96,290 bytes. (An earlier draft said "about 1,483,000",
+   a midpoint that appears nowhere in the data; the range above is what was
+   measured.)
 
  Q3 IS SPLIT - WITH A SMOKING GUN IN msquic's OWN SOURCE
    RTT measurements ARE correctly excluded by path. Acknowledged byte counts
@@ -562,7 +572,7 @@
  object storage, and raw traces re-parsed with its own parsers for all three
  qlog formats. It runs 30 checks. All 30 pass.
 
- It earned its keep. Six claims did not survive, and all six had already been
+ It earned its keep. Seven claims did not survive, and all seven had already been
  written down before we caught them.
 
  1. "picoquic's window stayed flat at 241,174 bytes."
@@ -611,7 +621,7 @@
     loss case separately. An early version of the independent validator made
     the same assumption and was corrected with it.
 
- All six corrections are recorded IN the data itself, in survey_results.json,
+ All seven corrections are recorded IN the data itself, in survey_results.json,
  under keys named _correction_2026_08_11 - with the reason, so that nobody
  (including us) reintroduces them later.
 

@@ -38,7 +38,7 @@ than none: implementing the §9.4 reset without the accompanying old-path
 exclusion took transfer completion from 5/5 to 0/15 in our own patched build.
 
 Every claim in this repository is re-derivable from primary sources by an
-independent validator that shares no code with the analysis pipeline. It runs 27
+independent validator that shares no code with the analysis pipeline. It runs 30
 checks; all 30 pass.
 
 ---
@@ -507,11 +507,17 @@ single loss event applies — and the observed value confirmed to be explicable
 | msquic | 10 × 1220 = 12,200 B | 2,440 B | ×0.7 |
 | ngtcp2 | 12,000 B (RFC 9002 §7.2 formula) | 2,400 B | ×0.7 |
 
-In quic-go this mattered decisively. The observed sequence was
-279,456 → 195,619 → 40,960 B. The middle value is exactly 279,456 × 0.7, a Reno
-loss backoff; only the final value can be a reset. A loss event and a reset both
-occurred, 0.4 ms apart. Without the discriminator this would have been reported as
-one event where there were two.
+In quic-go this mattered decisively, and it is the discriminator's clearest case.
+In **every one of the five repetitions** the window sample immediately before the
+reset is *exactly* 0.7 × the preceding peak — a Reno loss backoff — and the reset
+to exactly 40,960 B follows between 0.44 and 1.96 ms later:
+
+| | Peak before | ×0.7 backoff | Reset | Gap |
+|---|---|---|---|---|
+| across 5/5 reps | 274,025–280,414 B | 191,817–196,289 B | **40,960 B** | 0.44–1.96 ms |
+
+Two distinct events, not one. Without checking the loss arithmetic first, the
+pair would have been reported as a single collapse.
 
 ### 6.3 The emulation testbed
 
@@ -787,7 +793,7 @@ Upstream implementations are **not** vendored. They are pinned by commit in
 
 ## 11. Record of corrections
 
-Six claims did not survive the validation pass. All six had already been written
+Seven claims did not survive the validation pass. All seven had already been written
 down before they were caught. They are recorded here, and in the data file under
 `_correction_*` keys with their reasoning, so that they are not reintroduced.
 

@@ -160,7 +160,26 @@
         ],
         "new_path_true_rtt_ms": 40.0,
         "rtt_reflects": "new path",
-        "_correction_2026_08_11": "History, kept so the numbers are traceable: originally reported as n=4 with a 279,456 B pre-migration window. That was wrong -- the original run's server_metrics.csv had been OVERWRITTEN by later repeats because the trial script hardcodes its output directory, leaving only 3 retained reps. RESOLVED 2026-08-11 by re-running 5 fresh repetitions through _build/quicgo_repeat2.sh, which parses and archives each rep before the next. Current figures are from those 5: peaks 274,025-280,414 -> exactly 40,960 in 5/5, first post-migration RTT 40.4-40.8 ms on a 40 ms path."
+        "_correction_2026_08_11": "History, kept so the numbers are traceable: originally reported as n=4 with a 279,456 B pre-migration window. That was wrong -- the original run's server_metrics.csv had been OVERWRITTEN by later repeats because the trial script hardcodes its output directory, leaving only 3 retained reps. RESOLVED 2026-08-11 by re-running 5 fresh repetitions through _build/quicgo_repeat2.sh, which parses and archives each rep before the next. Current figures are from those 5: peaks 274,025-280,414 -> exactly 40,960 in 5/5, first post-migration RTT 40.4-40.8 ms on a 40 ms path.",
+        "loss_then_reset": {
+          "observed_reps": "5/5",
+          "peak_before_bytes_range": [
+            274025,
+            280414
+          ],
+          "backoff_bytes_range": [
+            191817,
+            196289
+          ],
+          "backoff_is_exactly_0_7_of_peak": true,
+          "gap_to_reset_ms_range": [
+            0.44,
+            1.96
+          ],
+          "reset_value_bytes": 40960,
+          "detail": "This is the discriminator's decisive case. In EVERY repetition the cwnd sample immediately before the reset is exactly 0.7x the preceding peak -- a Reno loss backoff -- and the reset to exactly 40,960 B follows 0.44-1.96 ms later. Two distinct events, not one. Without checking the loss arithmetic first, the pair would have been reported as a single collapse.",
+          "method": "_qa/verify_quicgo_discriminator2.py; the cwnd column is emitted only on change, and the FIRST 40,960 in each trace is the connection starting at its initial window, not a reset -- the reset is the RETURN to that value after the window has grown."
+        }
       },
       "notes": "No multipath in the codebase, so a single migration code path and no scoping caveat. addrsEqual compares IP AND port, so it resets on any address change -- it does not take the RFC's port-only leniency."
     },
@@ -414,6 +433,13 @@
       "status": "WRONG",
       "correction": "60 ms belongs to the step-down scenario and had been copied into the live record by mistake. The run was shaped 20 ms / 40 ms, confirmed by its own shaping logs and by its qlog settling at 41.9 ms.",
       "stored_at": "implementations[picoquic].live._correction_2026_08_12_rtt"
+    },
+    {
+      "id": "C7",
+      "claim": "the quic-go discriminator sequence was 279,456 -> 195,619 -> 40,960, with the loss event and the reset 0.4 ms apart",
+      "status": "UNVERIFIABLE AS STATED",
+      "correction": "Neither 279,456 nor 195,619 occurs anywhere in the five retained repetitions -- both came from the n=4 trace that was overwritten (see C2), so the figures could not be re-derived and should never have survived the re-run. Re-measured from retained data the phenomenon is REAL and stronger than was claimed: a x0.7 Reno backoff immediately precedes the reset in 5/5 repetitions, peaks of 274,025-280,414 B backing off to 191,817-196,289 B, then a reset to exactly 40,960 B between 0.44 and 1.96 ms later. 'In one case' understated it and '0.4 ms' was the low end of a range. Every document now quotes the retained figures.",
+      "stored_at": "implementations[quic-go].live.loss_then_reset"
     },
     {
       "id": "C6",

@@ -167,7 +167,7 @@ You deliver the most striking single result, then establish why the numbers can 
 >
 > *[point]* Where the bar drops to exactly the dashed line, that's a reset.
 >
-> And we were careful here. A collapse to the starting value only *proves* a reset if an ordinary loss event couldn't produce the same number. So for each implementation we looked up its loss arithmetic first and confirmed it couldn't. In one case that mattered a great deal — it revealed a loss event and a reset happening four tenths of a millisecond apart, where we'd otherwise have reported one event instead of two."
+> And we were careful here. A collapse to the starting value only *proves* a reset if an ordinary loss event couldn't produce the same number. So for each implementation we looked up its loss arithmetic first and confirmed it couldn't. In quic-go that mattered a great deal — in all five runs there are actually *two* events, not one: an ordinary loss backoff to exactly seven tenths of the peak, and then, one to two milliseconds later, the real reset to exactly forty thousand nine hundred and sixty bytes. Without the arithmetic we'd have reported a single collapse."
 
 ## Slide 11 — Rigour (~45 s)
 
@@ -177,9 +177,9 @@ You deliver the most striking single result, then establish why the numbers can 
 >
 > Then we wrote a second validator from scratch — sharing no code with the first — that re-derives every claim independently, pulling source straight out of git and re-parsing the raw traces with its own parsers. Twenty-seven checks. Twenty-seven pass.
 >
-> And it earned its keep: along the way this process caught six things we'd got wrong. A window we'd described as flat that had actually declined. A repetition count of four that was really three. A piece of live evidence too weak to carry the claim we'd hung on it. A cause we'd asserted without proving. A path delay recorded as sixty milliseconds that was really forty. And — the one that stings — a verdict line in our own parser that would have called a loss event a reset.
+> And it earned its keep: along the way this process caught seven things we'd got wrong. A window we'd described as flat that had actually declined. A repetition count of four that was really three. A piece of live evidence too weak to carry the claim we'd hung on it. A cause we'd asserted without proving. A path delay recorded as sixty milliseconds that was really forty. And — the one that stings — a verdict line in our own parser that would have called a loss event a reset.
 >
-> All six are corrected, and all six are recorded in the data with the reason — so nobody re-introduces them later."
+> All seven are corrected, and all seven are recorded in the data with the reason — so nobody re-introduces them later."
 
 **Hand over:**
 > "Shafeeq will close."

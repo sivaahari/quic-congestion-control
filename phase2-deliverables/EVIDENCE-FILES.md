@@ -1,6 +1,6 @@
 # Phase 2 — Evidence to Submit
 
-A ready-made bundle is at **`phase2-deliverables/evidence/`** — **123 files, 43 MB**. Submit that folder.
+A ready-made bundle is at **`phase2-deliverables/evidence/`** — **134 files, 44 MB**. Submit that folder.
 
 Rebuild it any time:
 
@@ -37,7 +37,7 @@ One or more per implementation. These are what established the source-side answe
 
 Notable: `revalidate_pristine.sh` re-derives the picoquic finding from **pristine upstream source pulled out of git object storage**, so our own later modifications cannot contaminate it.
 
-### `03_live_measurements/` — 27 files, the measured evidence
+### `03_live_measurements/` — 37 files, the measured evidence
 
 Per-repetition congestion-window and RTT time series for every implementation that was measured live:
 
@@ -85,5 +85,5 @@ Everything excluded is at `/home/sivaa/pvseed/` inside WSL, reachable from Windo
 Three answers, in increasing strength:
 
 1. **Every claim was answered twice** — once from source, once from measurement — and they had to agree.
-2. **The reset-vs-loss discriminator.** A drop to the initial window only proves a reset if an ordinary loss event could not produce the same number. We looked up each implementation's initial window, loss floor and reduction factor and confirmed it. In quic-go that revealed a loss event and a reset 0.4 ms apart, where we would otherwise have reported one.
-3. **An independent validator**, written from scratch, re-derives all 30 checks from primary sources and passes all of them. It also caught six things we had got wrong along the way — including a verdict line in our own parser that would have called a loss event a reset. All six are corrected and recorded, with their reasons, in the `corrections` list in `survey_results.json`.
+2. **The reset-vs-loss discriminator.** A drop to the initial window only proves a reset if an ordinary loss event could not produce the same number. We looked up each implementation's initial window, loss floor and reduction factor and confirmed it. In quic-go that revealed two events where one would have been reported: in 5/5 repetitions a Reno backoff to exactly 0.7× the peak (274,025–280,414 B → 191,817–196,289 B) is followed 0.44–1.96 ms later by the reset to exactly 40,960 B.
+3. **An independent validator**, written from scratch, re-derives all 30 checks from primary sources and passes all of them. It also caught seven things we had got wrong along the way — including a verdict line in our own parser that would have called a loss event a reset. All seven are corrected and recorded, with their reasons, in the `corrections` list in `survey_results.json`.
